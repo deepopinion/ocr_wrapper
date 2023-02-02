@@ -4,7 +4,7 @@ from hashlib import sha256
 
 import shelve
 from io import BytesIO
-from typing import Optional, List
+from typing import Optional, Union
 
 from PIL import Image, ImageDraw, ImageOps
 from .bbox import BBox
@@ -24,14 +24,18 @@ class OcrWrapper(ABC):
         self.cache_file = cache_file
         self.max_size = max_size
         self.verbose = verbose
+        self.extra = {}  # Extra information to be returned by ocr()
 
-    def ocr(self, img: Image.Image) -> List[BBox]:
-        """Returns OCR result as a list of normalized BBox"""
-        # Resize image if needed
+    def ocr(self, img: Image.Image, return_extra: bool = False) -> Union[list[BBox], tuple[list[BBox], dict]]:
+        """Returns OCR result as a list of normalized BBox
+
+        Args:
+            img: Image to be processed
+            return_extra: If True, returns a tuple of (bboxes, extra) where extra is a dict containing extra information
+        """
+        # Resize image if needed. If the image is smaller than max_size, it will be returned as is
         if self.max_size is not None:
-            img = self._resize_image(
-                img, self.max_size
-            )  # If the image is smaller than max_size, it will be returned as is
+            img = self._resize_image(img, self.max_size)
         # Get response from an OCR engine
         response = self._get_ocr_response(img)
         # Convert the response to our internal format
@@ -39,6 +43,9 @@ class OcrWrapper(ABC):
         # Normalize all boxes
         width, height = img.size
         bboxes = [bbox.to_normalized(img_width=width, img_height=height) for bbox in bboxes]
+
+        if return_extra:
+            return bboxes, self.extra
         return bboxes
 
     @staticmethod
@@ -60,11 +67,11 @@ class OcrWrapper(ABC):
         pass
 
     @abstractmethod
-    def _convert_ocr_response(self, response) -> List[BBox]:
+    def _convert_ocr_response(self, response) -> list[BBox]:
         pass
 
     @staticmethod
-    def draw(image: Image.Image, boxes: List[BBox]):
+    def draw(image: Image.Image, boxes: list[BBox]):
         """draw the bounding boxes over the original image to visualize result"""
         image = ImageOps.exif_transpose(image)
         if image.mode != "RGB":

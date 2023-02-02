@@ -27,6 +27,83 @@ def requires_gcloud(fn):
     return wrapper_decocator
 
 
+# Define a list of languages which are written from right to left. This is needed to determine the rotation of the document
+rtl_languages = ["ar", "arc", "dv", "fa", "ha", "he", "khw", "ks", "ku", "ps", "ur", "yi"]
+
+
+def get_mean_symbol_deltas(response):
+    """Given an ocr response, calculates the mean x and y deltas for the first and last symbol in all the words.
+
+    The information in rtl_languages is used to compensate for the right to left reading direction of some languages.
+
+    This information can be used to judge the rotation of the text
+    """
+    xdeltas, ydeltas = [], []
+    for page in response.full_text_annotation.pages:
+        for block in page.blocks:
+            for paragraph in block.paragraphs:
+                for word in paragraph.words:
+                    # Get language code
+                    language_code = ""
+                    if len(word.property.detected_languages) > 0:
+                        language_code = word.property.detected_languages[0].language_code
+                    # Calculate deltas
+                    first_symbol = word.symbols[0]
+                    last_symbol = word.symbols[-1]
+                    xdelta = last_symbol.bounding_box.vertices[1].x - first_symbol.bounding_box.vertices[0].x
+                    ydelta = last_symbol.bounding_box.vertices[1].y - first_symbol.bounding_box.vertices[0].y
+                    # Fix deltas for RTL languages
+                    if abs(xdelta) > abs(ydelta):  # Horizontal word orientation
+                        if language_code in rtl_languages:
+                            xdelta = -xdelta
+                    else:  # Vertical word orientation
+                        if language_code in rtl_languages:
+                            ydelta = -ydelta
+
+                    xdeltas.append(xdelta)
+                    ydeltas.append(ydelta)
+
+    # Calculate the median deltas
+    xmean_delta = sum(xdeltas) / len(xdeltas)
+    ymean_delta = sum(ydeltas) / len(ydeltas)
+
+    return xmean_delta, ymean_delta
+
+
+def get_rotation(xmean_delta, ymean_delta):
+    """Given the mean x and y deltas, calculates the rotation of the text at 0, 90, 180, or 270 degrees
+
+    This assumes a reading direction of left to right, top to bottom
+    """
+    # Normalize deltas so the bigger number becomes 1 and the smaller 0, preserving the sign
+    if abs(xmean_delta) > abs(ymean_delta):
+        xmean_delta, ymean_delta = xmean_delta / abs(xmean_delta), 0
+    else:
+        xmean_delta, ymean_delta = 0, ymean_delta / abs(ymean_delta)
+
+    # Define rotation dictionary
+    rotation_dict = {(1, 0): 0, (0, 1): 90, (-1, 0): 180, (0, -1): 270, (0, 0): 0}
+
+    return rotation_dict[(xmean_delta, ymean_delta)]
+
+
+def get_word_and_language_codes(response):
+    """Given an ocr response, returns a list of tuples of word and language codes"""
+    word_and_language_codes = []
+    for page in response.full_text_annotation.pages:
+        for block in page.blocks:
+            for paragraph in block.paragraphs:
+                for word in paragraph.words:
+                    if len(word.property.detected_languages) > 0:
+                        word_and_language_codes.append(
+                            (
+                                "".join([s.text for s in word.symbols]),
+                                word.property.detected_languages[0].language_code,
+                            )
+                        )
+    return word_and_language_codes
+
+
 class GoogleOCR(OcrWrapper):
     @requires_gcloud
     def __init__(self, *, cache_file: Optional[str] = None, max_size: Optional[int] = 1024, verbose: bool = False):
@@ -54,22 +131,25 @@ class GoogleOCR(OcrWrapper):
             nb_repeats = 2  # Try to repeat twice before failing
             while True:
                 try:
-                    response = self.client.text_detection(image=vision_img)
+                    response = self.client.document_text_detection(image=vision_img)
                     break
                 except Exception:
                     if nb_repeats == 0:
                         raise
                     nb_repeats -= 1
                     sleep(1.0)
-
             self._put_on_shelf(img, response)
         return response
 
     @requires_gcloud
     def _convert_ocr_response(self, response) -> List[BBox]:
         """Converts the response given by Google OCR to a list of BBox"""
-        bboxes = []
+        # Determine the rotation of the document
+        rotation = get_rotation(*get_mean_symbol_deltas(response))
+        self.extra["document_rotation"] = rotation
+
         # Iterate over all responses except the first. The first is for the whole document -> ignore
+        bboxes = []
         for annotation in response.text_annotations[1:]:
             text = annotation.description
             coords = [item for vert in annotation.bounding_poly.vertices for item in [vert.x, vert.y]]

@@ -6,6 +6,7 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 ### Added
 - Added an automatic resize option for documents. We found out, that
   using a max_size of 1024 for the documents improves the OCR quality.
+- Adds document rotation information to the GoogleOCR response.
 ### Changed
 
 ### Fixed

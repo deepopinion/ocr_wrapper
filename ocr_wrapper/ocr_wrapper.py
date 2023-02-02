@@ -38,9 +38,7 @@ class OcrWrapper(ABC):
         bboxes = self._convert_ocr_response(response)
         # Normalize all boxes
         width, height = img.size
-        bboxes = [
-            bbox.to_normalized(img_width=width, img_height=height) for bbox in bboxes
-        ]
+        bboxes = [bbox.to_normalized(img_width=width, img_height=height) for bbox in bboxes]
         return bboxes
 
     @staticmethod

@@ -25,9 +25,7 @@ def requires_azure(fn):
     @functools.wraps(fn)
     def wrapper_decocator(*args, **kwargs):
         if not _has_azure:
-            raise ImportError(
-                'Azure Read requires missing "azure-cognitiveservices-vision-computervision" package.'
-            )
+            raise ImportError('Azure Read requires missing "azure-cognitiveservices-vision-computervision" package.')
         return fn(*args, **kwargs)
 
     return wrapper_decocator
@@ -79,8 +77,6 @@ class AzureOCR(OcrWrapper):
         for annotation in response.analyze_result.read_results:
             for line in annotation.lines:
                 for word in line.words:
-                    bbox = BBox.from_float_list(
-                        word.bounding_box, text=word.text, in_pixels=True
-                    )
+                    bbox = BBox.from_float_list(word.bounding_box, text=word.text, in_pixels=True)
                     bboxes.append(bbox)
         return bboxes

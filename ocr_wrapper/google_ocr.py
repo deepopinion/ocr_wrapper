@@ -21,9 +21,7 @@ def requires_gcloud(fn):
     @functools.wraps(fn)
     def wrapper_decocator(*args, **kwargs):
         if not _has_gcloud:
-            raise ImportError(
-                'Google OCR requires missing "google-cloud-vision" package.'
-            )
+            raise ImportError('Google OCR requires missing "google-cloud-vision" package.')
         return fn(*args, **kwargs)
 
     return wrapper_decocator
@@ -38,9 +36,7 @@ class GoogleOCR(OcrWrapper):
                 credentials_path = "/credentials.json"
             else:
                 credentials_path = "~/.config/gcloud/credentials.json"
-            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.path.expanduser(
-                credentials_path
-            )
+            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.path.expanduser(credentials_path)
         self.client = vision.ImageAnnotatorClient()
 
     @requires_gcloud
@@ -76,11 +72,7 @@ class GoogleOCR(OcrWrapper):
         # Iterate over all responses except the first. The first is for the whole document -> ignore
         for annotation in response.text_annotations[1:]:
             text = annotation.description
-            coords = [
-                item
-                for vert in annotation.bounding_poly.vertices
-                for item in [vert.x, vert.y]
-            ]
+            coords = [item for vert in annotation.bounding_poly.vertices for item in [vert.x, vert.y]]
             bbox = BBox.from_float_list(coords, text=text, in_pixels=True)
             bboxes.append(bbox)
         return bboxes

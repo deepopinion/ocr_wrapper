@@ -22,7 +22,9 @@ class BBox:
     BRy: Union[float, int]
     BLx: Union[float, int]  # Bottom Right
     BLy: Union[float, int]
-    in_pixels: bool = False  # If True, the coordinates are absolute pixel values, otherwise they are relative in the range [0, 1]
+    in_pixels: bool = (
+        False  # If True, the coordinates are absolute pixel values, otherwise they are relative in the range [0, 1]
+    )
     text: Optional[str] = None
     label: Optional[str] = None
 
@@ -132,13 +134,9 @@ class BBox:
         return BBox.from_float_list(out, in_pixels=True)
 
     @staticmethod
-    def from_layoutlm(
-        bbox_list: list[int], text: Optional[str] = None, label: Optional[str] = None
-    ) -> "BBox":
+    def from_layoutlm(bbox_list: list[int], text: Optional[str] = None, label: Optional[str] = None) -> "BBox":
         x1, y1, x2, y2 = [b / 1000 for b in bbox_list]
-        return BBox(
-            x1, y1, x2, y1, x2, y2, x1, y2, in_pixels=False, text=text, label=label
-        )
+        return BBox(x1, y1, x2, y1, x2, y2, x1, y2, in_pixels=False, text=text, label=label)
 
     @staticmethod
     def from_dict(dictionary):
@@ -197,31 +195,23 @@ class BBox:
 
         # Check if rectangle entry is there (this should always be given) and extract bbox data from it
         if "rectangle" not in typedicts:
-            raise Exception(
-                "No rectangle entry found in list of dicts. This entry is mandatory"
-            )
+            raise Exception("No rectangle entry found in list of dicts. This entry is mandatory")
         bbox = BBox.from_labelstudio_coords(typedicts["rectangle"]["value"])
 
         # If a textarea entry is given, get the OCR text from there
         if "textarea" in typedicts:
             text = typedicts["textarea"]["value"]["text"]
             if len(text) != 1:
-                raise Exception(
-                    f"Error. The text field should have one entry, but consists of {text} for id {ids}"
-                )
+                raise Exception(f"Error. The text field should have one entry, but consists of {text} for id {ids}")
             bbox.text = text[0]
 
         # If a labels entry is given, get the label from there
         if "labels" in typedicts:
             try:
                 labels = typedicts["labels"]["value"]["labels"]
-            except (
-                Exception
-            ):  # It rarely happens that the labels entry is missing. Catch that and set labels to empty
+            except Exception:  # It rarely happens that the labels entry is missing. Catch that and set labels to empty
                 labels = []
-            if (
-                len(labels) == 0
-            ):  # Sometimes there is a label entry given, but no actual label is listed
+            if len(labels) == 0:  # Sometimes there is a label entry given, but no actual label is listed
                 bbox.label = None
             elif len(labels) == 1:
                 bbox.label = labels[0]

@@ -52,11 +52,7 @@ class AwsOCR(OcrWrapper):
         for block in response["Blocks"]:
             if block["BlockType"] != "WORD":
                 continue
-            coords = [
-                item
-                for vert in block["Geometry"]["Polygon"]
-                for item in [vert["X"], vert["Y"]]
-            ]
+            coords = [item for vert in block["Geometry"]["Polygon"] for item in [vert["X"], vert["Y"]]]
             bbox = BBox.from_float_list(coords, text=block["Text"], in_pixels=False)
             bboxes.append(bbox)
         return bboxes

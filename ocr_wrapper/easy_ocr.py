@@ -41,7 +41,8 @@ class EasyOCR(OcrWrapper):
         """
         Args:
             languages: A string or a list of languages to use for OCR from the list here: https://www.jaided.ai/easyocr/
-            width_thr: Distance where bounding boxes are still getting merged into one"""
+            width_thr: Distance where bounding boxes are still getting merged into one
+        """
         super().__init__(cache_file=cache_file, verbose=verbose)
         self.languages = [languages] if isinstance(languages, str) else list(languages)
         self.width_thr = width_thr

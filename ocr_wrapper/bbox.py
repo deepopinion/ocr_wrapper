@@ -90,6 +90,7 @@ class BBox:
         self.BLx, self.BLy = leftlist[1]
         self.TRx, self.TRy = rightlist[0]
         self.BRx, self.BRy = rightlist[1]
+
         # Increase size of bounding box if it is collapsed
         def expand_if_necessary(a, b):
             if a != b:
@@ -214,7 +215,9 @@ class BBox:
         if "labels" in typedicts:
             try:
                 labels = typedicts["labels"]["value"]["labels"]
-            except Exception:  # It rarely happens that the labels entry is missing. Catch that and set labels to empty
+            except (
+                Exception
+            ):  # It rarely happens that the labels entry is missing. Catch that and set labels to empty
                 labels = []
             if (
                 len(labels) == 0

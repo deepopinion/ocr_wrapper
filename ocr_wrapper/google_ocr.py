@@ -29,8 +29,8 @@ def requires_gcloud(fn):
 
 class GoogleOCR(OcrWrapper):
     @requires_gcloud
-    def __init__(self, *, cache_file: Optional[str] = None, verbose: bool = False):
-        super().__init__(cache_file=cache_file, verbose=verbose)
+    def __init__(self, *, cache_file: Optional[str] = None, max_size: Optional[int] = 1024, verbose: bool = False):
+        super().__init__(cache_file=cache_file, max_size=max_size, verbose=verbose)
         if not os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
             if os.path.isfile("/credentials.json"):
                 credentials_path = "/credentials.json"

@@ -4,7 +4,8 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 
 ## Release v0.0.5  (2022-??-??)
 ### Added
-
+- Added an automatic resize option for documents. We found out, that
+  using a max_size of 1024 for the documents improves the OCR quality.
 ### Changed
 
 ### Fixed

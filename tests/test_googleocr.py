@@ -7,7 +7,7 @@ DATA_DIR = os.path.join(filedir, "data")
 
 
 def test_google_ocr():
-    img = Image.open(os.path.join(DATA_DIR, "ocr_test.png"))
+    img = Image.open(os.path.join(DATA_DIR, "ocr_test_big.png"))
     ocr = GoogleOCR()
 
     res = ocr.ocr(img)

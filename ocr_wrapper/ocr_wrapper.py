@@ -14,12 +14,24 @@ class OcrWrapper(ABC):
     """Base class for OCR engines. Subclasses must implement ``_get_ocr_response``
     and ``_conver_ocr_response``."""
 
-    def __init__(self, *, cache_file: Optional[str] = None, verbose: bool = False):
+    def __init__(
+        self,
+        *,
+        cache_file: Optional[str] = None,
+        max_size: Optional[int] = 1024,
+        verbose: bool = False,
+    ):
         self.cache_file = cache_file
+        self.max_size = max_size
         self.verbose = verbose
 
     def ocr(self, img: Image.Image) -> List[BBox]:
         """Returns OCR result as a list of normalized BBox"""
+        # Resize image if needed
+        if self.max_size is not None:
+            img = self._resize_image(
+                img, self.max_size
+            )  # If the image is smaller than max_size, it will be returned as is
         # Get response from an OCR engine
         response = self._get_ocr_response(img)
         # Convert the response to our internal format
@@ -30,6 +42,20 @@ class OcrWrapper(ABC):
             bbox.to_normalized(img_width=width, img_height=height) for bbox in bboxes
         ]
         return bboxes
+
+    @staticmethod
+    def _resize_image(img: Image.Image, max_size: int) -> Image.Image:
+        """Resize the image to a maximum size, keeping the aspect ratio."""
+        width, height = img.size
+        if width > max_size or height > max_size:
+            if width > height:
+                new_width = max_size
+                new_height = int(max_size * height / width)
+            else:
+                new_height = max_size
+                new_width = int(max_size * width / height)
+            img = img.resize((new_width, new_height), resample=Image.Resampling.LANCZOS)
+        return img
 
     @abstractmethod
     def _get_ocr_response(self, img: Image.Image):

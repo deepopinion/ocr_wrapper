@@ -7,7 +7,7 @@ DATA_DIR = os.path.join(filedir, "data")
 
 
 def test_easy_ocr():
-    img = Image.open(os.path.join(DATA_DIR, "ocr_test.png"))
+    img = Image.open(os.path.join(DATA_DIR, "ocr_test_big.png"))
     ocr = EasyOCR(languages=["en"], width_thr=0.1)
 
     res = ocr.ocr(img)

@@ -106,7 +106,36 @@ def get_word_and_language_codes(response):
 
 class GoogleOCR(OcrWrapper):
     @requires_gcloud
-    def __init__(self, *, cache_file: Optional[str] = None, max_size: Optional[int] = None, verbose: bool = False):
+    def __init__(
+        self,
+        *,
+        cache_file: Optional[str] = None,
+        max_size: Optional[int] = None,
+        endpoint: Optional[str] = "eu-vision.googleapis.com",
+        verbose: bool = False,
+    ):
+    """
+    A class that provides OCR functionality using Google Cloud Vision API.
+
+    Inherits from the OcrWrapper base class and adds a client for communicating
+    with the Google Cloud Vision API. Requires authentication credentials to be
+    set as an environment variable or stored in a file in the default location.
+
+    Args:
+        cache_file (Optional[str]): Path to a file to use for caching OCR results.
+            Defaults to None, which disables caching.
+        max_size (Optional[int]): Maximum size of the image to send to the OCR, if
+            larger the image will be resized. Defaults to None, which disables resizing.
+        endpoint (Optional[str]): URL of the Google Cloud Vision API endpoint to use.
+            Defaults to "eu-vision.googleapis.com". "us-vision.googleapis.com" is also
+            available. If None, the default endpoint (global) will be used.
+        verbose (bool): Whether to print debug information during OCR processing.
+            Defaults to False.
+
+    Attributes:
+        client: A vision.ImageAnnotatorClient instance for communicating with the
+            Google Cloud Vision API.
+    """
         super().__init__(cache_file=cache_file, max_size=max_size, verbose=verbose)
         if not os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
             if os.path.isfile("/credentials.json"):
@@ -114,7 +143,8 @@ class GoogleOCR(OcrWrapper):
             else:
                 credentials_path = "~/.config/gcloud/credentials.json"
             os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.path.expanduser(credentials_path)
-        self.client = vision.ImageAnnotatorClient()
+        # Create the client with a european endpoint
+        self.client = vision.ImageAnnotatorClient(client_options={"api_endpoint": endpoint})
 
     @requires_gcloud
     def _get_ocr_response(self, img: Image.Image):

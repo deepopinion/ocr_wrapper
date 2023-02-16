@@ -33,7 +33,16 @@ class BBox:
         self,
     ):
         # Clip coordinates < 0
-        (self.TLx, self.TLy, self.TRx, self.TRy, self.BRx, self.BRy, self.BLx, self.BLy,) = [
+        (
+            self.TLx,
+            self.TLy,
+            self.TRx,
+            self.TRy,
+            self.BRx,
+            self.BRy,
+            self.BLx,
+            self.BLy,
+        ) = [
             max(coord, 0.0)
             for coord in [
                 self.TLx,

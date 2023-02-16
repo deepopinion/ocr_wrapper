@@ -4,15 +4,21 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 
 ## Release v0.0.5  (2022-??-??)
 ### Added
-- Added an automatic resize option for documents. We found out, that
-  using a max_size of 1024 for the documents improves the OCR quality.
-- Adds document rotation information to the GoogleOCR response.
+
 ### Changed
 
 ### Fixed
 
 ### Removed
 
+
+## Release v0.0.5  (2022-02-16)
+### Added
+- Added an automatic resize option for documents. Turned off by
+  default, but can improve OCR results in some cases
+- Added document rotation information to the GoogleOCR response.
+- Added the option to specify a specific endpoint for GoogleOCR and
+  fixed the default to europe
 
 ## Release v0.0.4  (2022-10-06)
 ### Fixed

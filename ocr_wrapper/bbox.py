@@ -7,6 +7,7 @@ from typing import Optional, Union
 from uuid import uuid4
 
 from PIL import Image, ImageDraw, ImageFont
+from shapely import affinity
 from shapely.geometry import Polygon
 
 
@@ -32,16 +33,7 @@ class BBox:
         self,
     ):
         # Clip coordinates < 0
-        (
-            self.TLx,
-            self.TLy,
-            self.TRx,
-            self.TRy,
-            self.BRx,
-            self.BRy,
-            self.BLx,
-            self.BLy,
-        ) = [
+        (self.TLx, self.TLy, self.TRx, self.TRy, self.BRx, self.BRy, self.BLx, self.BLy,) = [
             max(coord, 0.0)
             for coord in [
                 self.TLx,
@@ -498,6 +490,47 @@ class BBox:
         _, self_max_x = self.get_x_extrema()
         that_min_x, _ = that.get_x_extrema()
         return that_min_x - self_max_x
+
+    def rotate_90deg_ccw(self) -> "BBox":
+        """Rotates the bbox by 90 degrees counter clockwise around (0,0)"""
+        # Only works for normalized bboxes
+        if self.in_pixels:
+            raise Exception("Rotation only supported for normalized bboxes")
+        # Get the polygon
+        poly = self.get_shapely_polygon()
+        # Rotate it
+        rotated_poly = affinity.rotate(poly, -90, origin=(0, 0))
+        # Get the new coordinates
+        x, y = rotated_poly.exterior.coords.xy
+        # Translate the coordinates so the upper left corner is at (0,0) agains
+        y = [e + 1 for e in y]
+        # Create the new bbox
+        return BBox.from_float_list(
+            [x[0], y[0], x[1], y[1], x[2], y[2], x[3], y[3]],
+            self.in_pixels,
+            text=self.text,
+            label=self.label,
+        )
+
+    def rotate(self, angle: Int) -> "BBox":
+        """
+        Rotates the bbox by angle degrees counter clockwise around (0,0)
+
+        Args:
+            angle: angle in degrees. Only 0, 90, 180, and 270 are valid
+        """
+        # Applies rotate_90deg_ccw multiple times. Not very efficient, but it works, is easy to understand,
+        # and is less prone to errors than a more complex implementation. Also not very time critical.
+        if angle == 0:
+            return self
+        elif angle == 90:
+            return self.rotate_90deg_ccw()
+        elif angle == 180:
+            return self.rotate_90deg_ccw().rotate_90deg_ccw()
+        elif angle == 270:
+            return self.rotate_90deg_ccw().rotate_90deg_ccw().rotate_90deg_ccw()
+        else:
+            raise Exception(f"Only 90, 180, and 270 are valid angles, but {angle} was given")
 
 
 def draw_bboxes(

@@ -21,6 +21,7 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
   fixed the default to europe
 - Added method to generate a `BBox` from x,y coordinates of the upper
   left and lower right corner and a width and height
+- Added methods to rotate a `BBox` in 90 degree steps
 
 ## Release v0.0.4  (2022-10-06)
 ### Fixed

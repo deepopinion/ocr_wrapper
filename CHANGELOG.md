@@ -17,6 +17,9 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 - Added an automatic resize option for documents. Turned off by
   default, but can improve OCR results in some cases
 - Added document rotation information to the GoogleOCR response.
+- Added the option to automatically rotate the bounding boxes and the
+  image to the correct orientation if `auto_rotate == True` for
+  GoogleOCR
 - Added the option to specify a specific endpoint for GoogleOCR and
   fixed the default to europe
 - Added method to generate a `BBox` from x,y coordinates of the upper

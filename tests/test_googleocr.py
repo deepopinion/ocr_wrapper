@@ -47,25 +47,20 @@ def test_google_ocr_rotation(ocr, filename, rotation):
     assert extras["document_rotation"] == rotation
 
 
-    def get_rotation(filename):
-        img = Image.open(os.path.join(DATA_DIR, filename))
-        _, extras = ocr.ocr(img, return_extra=True)
-        return extras["document_rotation"]
+# Fixture for unrotated bboxes
+@pytest.fixture
+def unrotated_bboxes(ocr):
+    img = Image.open(os.path.join(DATA_DIR, "ocr_test.png"))
+    return ocr.ocr(img)
 
-    # Check english text
-    assert get_rotation("ocr_test.png") == 0
-    assert get_rotation("ocr_test_90deg.png") == 90
-    assert get_rotation("ocr_test_180deg.png") == 180
-    assert get_rotation("ocr_test_270deg.png") == 270
 
-    # Check purely arabic text
-    assert get_rotation("pure_arabic.jpg") == 0
-    assert get_rotation("pure_arabic_90deg.jpg") == 90
-    assert get_rotation("pure_arabic_180deg.jpg") == 180
-    assert get_rotation("pure_arabic_270deg.jpg") == 270
+def test_google_ocr_auto_rotation(unrotated_bboxes):
+    ocr = GoogleOCR(auto_rotate=True)
 
-    # Check mixed english/arabic text
-    assert get_rotation("mixed_arabic.jpg") == 0
-    assert get_rotation("mixed_arabic_90deg.jpg") == 90
-    assert get_rotation("mixed_arabic_180deg.jpg") == 180
-    assert get_rotation("mixed_arabic_270deg.jpg") == 270
+    rotated_images_list = ["ocr_test_90deg.png", "ocr_test_180deg.png", "ocr_test_270deg.png"]
+
+    for img_filename in rotated_images_list:
+        img = Image.open(os.path.join(DATA_DIR, img_filename))
+        rotated_bboxes = ocr.ocr(img)
+        for unrot_bbox, rot_bbox in zip(unrotated_bboxes, rotated_bboxes):
+            assert unrot_bbox.get_float_list() == pytest.approx(rot_bbox.get_float_list(), abs=0.1)

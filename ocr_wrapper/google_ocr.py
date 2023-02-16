@@ -120,6 +120,10 @@ class GoogleOCR(OcrWrapper):
         endpoint (Optional[str]): URL of the Google Cloud Vision API endpoint to use.
             Defaults to "eu-vision.googleapis.com". "us-vision.googleapis.com" is also
             available. If None, the default endpoint (global) will be used.
+        auto_rotate (bool): Whether to automatically rotate the image to
+            compensate for text orientation. Defaults to False. If True, the
+            bounding boxes will be rotated to match a correctly rotated image. The correctly rotated
+            image itself will be returned in the extra directory from result, if return_extra is True.
         verbose (bool): Whether to print debug information during OCR processing.
             Defaults to False.
 
@@ -135,9 +139,11 @@ class GoogleOCR(OcrWrapper):
         cache_file: Optional[str] = None,
         max_size: Optional[int] = None,
         endpoint: Optional[str] = "eu-vision.googleapis.com",
+        auto_rotate: bool = False,
         verbose: bool = False,
     ):
-        super().__init__(cache_file=cache_file, max_size=max_size, verbose=verbose)
+        super().__init__(cache_file=cache_file, max_size=max_size, auto_rotate=auto_rotate, verbose=verbose)
+        # Get credentials from environment variable of the offered default locations
         if not os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
             if os.path.isfile("/credentials.json"):
                 credentials_path = "/credentials.json"

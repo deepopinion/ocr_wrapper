@@ -10,6 +10,24 @@ from PIL import Image, ImageDraw, ImageOps
 from .bbox import BBox
 
 
+def rotate_image(image: Image.Image, angle: int) -> Image.Image:
+    """
+    Rotate an image by a given angle.
+    Only 0, 90, 180, and 270 degrees are supported. Other angles will raise an Exception.
+    """
+    # The rotation angles in Pillow are counter-clockwise and ours are clockwise.
+    if angle == 0:
+        return image
+    if angle == 90:
+        return image.transpose(Image.Transpose.ROTATE_90)
+    elif angle == 180:
+        return image.transpose(Image.Transpose.ROTATE_180)
+    elif angle == 270:
+        return image.transpose(Image.Transpose.ROTATE_270)
+    else:
+        raise Exception(f"Unsupported angle: {angle}")
+
+
 class OcrWrapper(ABC):
     """Base class for OCR engines. Subclasses must implement ``_get_ocr_response``
     and ``_conver_ocr_response``."""
@@ -19,10 +37,12 @@ class OcrWrapper(ABC):
         *,
         cache_file: Optional[str] = None,
         max_size: Optional[int] = 1024,
+        auto_rotate: bool = False,
         verbose: bool = False,
     ):
         self.cache_file = cache_file
         self.max_size = max_size
+        self.auto_rotate = auto_rotate
         self.verbose = verbose
         self.extra = {}  # Extra information to be returned by ocr()
 
@@ -33,6 +53,8 @@ class OcrWrapper(ABC):
             img: Image to be processed
             return_extra: If True, returns a tuple of (bboxes, extra) where extra is a dict containing extra information
         """
+        # Keep copy of original image
+        original_img = img.copy()
         # Resize image if needed. If the image is smaller than max_size, it will be returned as is
         if self.max_size is not None:
             img = self._resize_image(img, self.max_size)
@@ -43,6 +65,13 @@ class OcrWrapper(ABC):
         # Normalize all boxes
         width, height = img.size
         bboxes = [bbox.to_normalized(img_width=width, img_height=height) for bbox in bboxes]
+
+        if self.auto_rotate and "document_rotation" in self.extra:
+            angle = self.extra["document_rotation"]
+            # Rotate image
+            self.extra["rotated_image"] = rotate_image(original_img, angle)
+            # Rotate boxes. The given rotation will be done counter-clockwise
+            bboxes = [bbox.rotate(angle) for bbox in bboxes]
 
         if return_extra:
             return bboxes, self.extra

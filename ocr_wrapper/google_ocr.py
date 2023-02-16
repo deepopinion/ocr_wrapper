@@ -144,7 +144,7 @@ class GoogleOCR(OcrWrapper):
             else:
                 credentials_path = "~/.config/gcloud/credentials.json"
             os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.path.expanduser(credentials_path)
-        # Create the client with a european endpoint
+        # Create the client with the specified endpoint
         self.client = vision.ImageAnnotatorClient(client_options={"api_endpoint": endpoint})
 
     @requires_gcloud

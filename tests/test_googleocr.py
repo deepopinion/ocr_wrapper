@@ -6,6 +6,7 @@ import pytest
 filedir = os.path.dirname(__file__)
 DATA_DIR = os.path.join(filedir, "data")
 
+
 # Create GoogleOCR instance as fixture
 @pytest.fixture
 def ocr():

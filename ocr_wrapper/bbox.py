@@ -119,6 +119,27 @@ class BBox:
         assert self.TRy < self.BRy
 
     @staticmethod
+    def from_xywh(
+        upperleft_x: Union[float, int],
+        upperleft_y: Union[float, int],
+        width: Union[float, int],
+        height: Union[float, int],
+        in_pixels: bool = False,
+    ) -> BBox:
+        """Creates a BBox from the upper left corner, width and height"""
+        return BBox(
+            upperleft_x,
+            upperleft_y,
+            upperleft_x + width,
+            upperleft_y,
+            upperleft_x + width,
+            upperleft_y + height,
+            upperleft_x,
+            upperleft_y + height,
+            in_pixels=in_pixels,
+        )
+
+    @staticmethod
     def from_float_list(
         float_list: list[float],
         in_pixels: bool = False,

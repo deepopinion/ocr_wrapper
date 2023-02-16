@@ -19,6 +19,8 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 - Added document rotation information to the GoogleOCR response.
 - Added the option to specify a specific endpoint for GoogleOCR and
   fixed the default to europe
+- Added method to generate a `BBox` from x,y coordinates of the upper
+  left and lower right corner and a width and height
 
 ## Release v0.0.4  (2022-10-06)
 ### Fixed

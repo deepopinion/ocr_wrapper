@@ -105,15 +105,6 @@ def get_word_and_language_codes(response):
 
 
 class GoogleOCR(OcrWrapper):
-    @requires_gcloud
-    def __init__(
-        self,
-        *,
-        cache_file: Optional[str] = None,
-        max_size: Optional[int] = None,
-        endpoint: Optional[str] = "eu-vision.googleapis.com",
-        verbose: bool = False,
-    ):
     """
     A class that provides OCR functionality using Google Cloud Vision API.
 
@@ -136,6 +127,16 @@ class GoogleOCR(OcrWrapper):
         client: A vision.ImageAnnotatorClient instance for communicating with the
             Google Cloud Vision API.
     """
+
+    @requires_gcloud
+    def __init__(
+        self,
+        *,
+        cache_file: Optional[str] = None,
+        max_size: Optional[int] = None,
+        endpoint: Optional[str] = "eu-vision.googleapis.com",
+        verbose: bool = False,
+    ):
         super().__init__(cache_file=cache_file, max_size=max_size, verbose=verbose)
         if not os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
             if os.path.isfile("/credentials.json"):

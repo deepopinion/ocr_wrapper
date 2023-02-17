@@ -1,7 +1,14 @@
+import os
+
 import pytest
-from hypothesis import given, assume, settings
-from hypothesis.strategies import floats, composite
+from hypothesis import assume, given, settings
+from hypothesis.strategies import composite, floats, from_regex, integers, lists, text
 from ocr_wrapper import BBox
+from ocr_wrapper.bbox import draw_bboxes
+from PIL import Image
+
+filedir = os.path.dirname(__file__)
+DATA_DIR = os.path.join(filedir, "data")
 
 
 @composite
@@ -29,3 +36,40 @@ def test_360deg_rotate_equality(xywh):
         bbox = bbox.rotate(90)
 
     assert pytest.approx(bbox.get_float_list(), abs=1e-2) == original
+
+
+color_code_regex = r"^#[0-9a-fA-F]{6}$"
+
+
+@given(
+    xywh1=bbox(),
+    xywh2=bbox(),
+    xywh3=bbox(),
+    colors=lists(elements=from_regex(color_code_regex), min_size=3, max_size=3),
+    fill_colors=lists(elements=from_regex(color_code_regex), min_size=3, max_size=3),
+    texts=lists(elements=text(), min_size=3, max_size=3),
+    fill_opacities=lists(elements=floats(min_value=0, max_value=1), min_size=3, max_size=3),
+    fontsize=floats(min_value=1, max_value=100),
+    maxaugment=floats(min_value=0, max_value=1),
+    strokewidths=integers(min_value=1, max_value=10),
+)
+def test_draw_bbox(
+    xywh1, xywh2, xywh3, colors, fill_colors, texts, fill_opacities, fontsize, maxaugment, strokewidths
+):
+    """Test that drawing bboxes works."""
+    img = Image.open(os.path.join(DATA_DIR, "ocr_test.png"))
+    bbox1 = BBox.from_xywh(*xywh1)
+    bbox2 = BBox.from_xywh(*xywh2)
+    bbox3 = BBox.from_xywh(*xywh3)
+    bboxes = [bbox1, bbox2, bbox3]
+    draw_bboxes(
+        img,
+        bboxes,
+        texts=texts,
+        colors=colors,
+        fill_colors=fill_colors,
+        fill_opacities=fill_opacities,
+        fontsize=fontsize,
+        max_augment=maxaugment,
+        strokewidths=strokewidths,
+    )

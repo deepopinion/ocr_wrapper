@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import dataclasses
+import os
 from dataclasses import dataclass
 from random import random
 from typing import Optional, Union
 from uuid import uuid4
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageColor, ImageDraw, ImageFont
 from shapely import affinity
 from shapely.geometry import Polygon
 
@@ -545,37 +546,81 @@ class BBox:
 def draw_bboxes(
     img: Image.Image,
     bboxes: list[BBox],
+    *,
     texts: Union[list[str], str] = "",
     colors: Union[list[str], str] = "blue",
     strokewidths: Union[list[int], int] = 3,
+    fill_colors: Union[list[str], str] = "blue",
+    fill_opacities: Union[list[float], float] = 0.0,
     fontsize: int = 10,
     max_augment: float = 0.0,  # Amount of to randomly change position of the bbox (for easier interpretation wiht overlapping bboxes)
 ):
-    """Given a PIL image and a list of bounding boxes, visualizes them in a copy of the image and returns the image
+    """Draws bounding boxes with texts, colors, etc. on a PIL image
 
-    Entries which have ``None`` as a color will not show up as a bounding box (text will still be shown though)
+    Args:
+        img (PIL.Image.Image): The image to draw the bounding boxes on.
+        bboxes (list[BBox]): The list of bounding boxes to draw on the image.
+        texts (Union[list[str], str]): A list of texts to draw on top of each bounding box,
+            in the same order as `bboxes`. Alternatively, a single string can be passed for
+            the same text to be drawn on all bounding boxes. Defaults to an empty string.
+        colors (Union[list[str], str]): A list of colors to draw the bounding boxes and texts in.
+            Alternatively, a single string can be passed for the same color to be used for all bounding boxes.
+            Defaults to "blue".
+        strokewidths (Union[list[int], int]): A list of widths for the bounding box borders, in pixels.
+            Alternatively, a single integer can be passed for the same width to be used for all bounding boxes.
+            Defaults to 3.
+        fill_colors (Union[list[str], str]): A list of colors to fill the bounding boxes with.
+            Alternatively, a single string can be passed for the same color to be used for all bounding boxes.
+            Defaults to 'blue'.
+        fill_opacities (Union[list[float], float]): A list of opacities for the fill colors.
+            Alternatively, a single float can be passed for the same opacity to be used for all bounding boxes.
+            Value of 1.0 means fully opaque, 0.0 means fully transparent. Defaults to 0.0
+        fontsize (int): The size of the font for the text drawn on top of the bounding boxes.
+            Defaults to 10.
+        max_augment (float): The maximum amount of random position change for the bounding boxes.
+            A float between 0 and 1. This is useful when there are overlapping bounding boxes and
+            one needs to be shifted a bit for better visibility. Defaults to 0.
+
+    Returns:
+        (PIL.Image.Image): A copy of the image with the bounding boxes and text drawn on it.
     """
-    if not isinstance(colors, list):
-        colors = [colors] * len(bboxes)
-    if not isinstance(texts, list):
-        texts = [texts] * len(bboxes)
-    if not isinstance(strokewidths, list):
-        strokewidths = [strokewidths] * len(bboxes)
-    assert len(bboxes) == len(texts) == len(colors) == len(strokewidths)
-    img = img.copy()
+
+    # We support both single values and lists, so we convert everything to lists if needed
+    def singe2list(single):
+        return [single] * len(bboxes) if not isinstance(single, list) else single
+
+    texts = singe2list(texts)
+    colors = singe2list(colors)
+    strokewidths = singe2list(strokewidths)
+    fill_colors = singe2list(fill_colors)
+    fill_opacities = singe2list(fill_opacities)
+    assert len(bboxes) == len(texts) == len(colors) == len(strokewidths) == len(fill_colors) == len(fill_opacities)
+
+    img = img.copy()  # Make a copy of the image to not modify the original
+    draw = ImageDraw.Draw(img, "RGBA")
     width, height = img.size
 
+    # Get font
     fontsize = int((fontsize / 1000) * width)
-    font = ImageFont.truetype("NotoSans-Regular.ttf", fontsize)
+    absolute_font_path = os.path.join(os.path.dirname(__file__), "NotoSans-Regular.ttf")  # Pillow needs absolute paths
+    font = ImageFont.truetype(absolute_font_path, fontsize)
 
-    draw = ImageDraw.Draw(img)
+    def color2rgba(color, opacity):
+        if color is None or opacity < 0.01:
+            return None
+        return ImageColor.getrgb(color) + (int(opacity * 255),)
 
     # Draw boxes
-    for bbox, color, text, strokewidth in zip(bboxes, colors, texts, strokewidths):
-        if color is not None:
+    for bbox, color, text, strokewidth, fill_color, fill_opacity in zip(
+        bboxes, colors, texts, strokewidths, fill_colors, fill_opacities
+    ):
+        fill_color = color2rgba(fill_color, fill_opacity)
+
+        if color is not None or fill_color is not None:
             bbox = bbox.to_pixels(width, height)
             bbox = bbox.get_augmented(max_augment=max_augment)
-            draw.polygon(bbox.get_float_list(), outline=color, width=strokewidth)
+            draw.polygon(bbox.get_float_list(), outline=color, fill=fill_color, width=strokewidth)
+
         # Draw text above box
         if text != "" and text is not None:
             draw.text(

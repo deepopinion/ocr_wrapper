@@ -2,9 +2,10 @@
 The version numbers are according to [Semantic Versioning](http://semver.org/).
 (Versions prior to v1.0.0 might not strictly follow semantic versioning)
 
-## Release v0.0.5  (2022-??-??)
+## Release v0.0.6  (2022-??-??)
 ### Added
-
+- Adds option to fill bboxes with a transparent color using
+  `draw_bboxes`
 ### Changed
 
 ### Fixed

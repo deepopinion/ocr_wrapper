@@ -7,7 +7,6 @@ filedir = os.path.dirname(__file__)
 DATA_DIR = os.path.join(filedir, "data")
 
 
-# Create GoogleOCR instance as fixture
 @pytest.fixture
 def ocr():
     return GoogleOCR()
@@ -48,6 +47,11 @@ def test_google_ocr_rotation(ocr, filename, rotation):
     assert extras["document_rotation"] == rotation
 
 
+@pytest.fixture
+def ocr_with_auto_rotate():
+    return GoogleOCR(auto_rotate=True)
+
+
 # Fixture for unrotated bboxes
 @pytest.fixture
 def unrotated_bboxes(ocr):
@@ -55,13 +59,18 @@ def unrotated_bboxes(ocr):
     return ocr.ocr(img)
 
 
-def test_google_ocr_auto_rotation(unrotated_bboxes):
-    ocr = GoogleOCR(auto_rotate=True)
-
+def test_google_ocr_auto_rotation(unrotated_bboxes, ocr_with_auto_rotate):
     rotated_images_list = ["ocr_test_90deg.png", "ocr_test_180deg.png", "ocr_test_270deg.png"]
 
     for img_filename in rotated_images_list:
         img = Image.open(os.path.join(DATA_DIR, img_filename))
-        rotated_bboxes = ocr.ocr(img)
+        rotated_bboxes = ocr_with_auto_rotate.ocr(img)
         for unrot_bbox, rot_bbox in zip(unrotated_bboxes, rotated_bboxes):
             assert unrot_bbox.get_float_list() == pytest.approx(rot_bbox.get_float_list(), abs=0.1)
+
+
+def test_document_without_text(ocr_with_auto_rotate):
+    filename = "no_ocr.png"
+    img = Image.open(os.path.join(DATA_DIR, filename))
+    res = ocr_with_auto_rotate.ocr(img)
+    assert len(res) == 0

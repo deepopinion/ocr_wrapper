@@ -181,10 +181,6 @@ class GoogleOCR(OcrWrapper):
     @requires_gcloud
     def _convert_ocr_response(self, response) -> List[BBox]:
         """Converts the response given by Google OCR to a list of BBox"""
-        # Determine the rotation of the document
-        rotation = get_rotation(*get_mean_symbol_deltas(response))
-        self.extra["document_rotation"] = rotation
-
         # Iterate over all responses except the first. The first is for the whole document -> ignore
         bboxes = []
         for annotation in response.text_annotations[1:]:
@@ -192,4 +188,12 @@ class GoogleOCR(OcrWrapper):
             coords = [item for vert in annotation.bounding_poly.vertices for item in [vert.x, vert.y]]
             bbox = BBox.from_float_list(coords, text=text, in_pixels=True)
             bboxes.append(bbox)
+
+        # Determine the rotation of the document
+        if len(bboxes) > 0:
+            rotation = get_rotation(*get_mean_symbol_deltas(response))
+            self.extra["document_rotation"] = rotation
+        else:  # If there is no OCR text, assume rotation is 0
+            self.extra["document_rotation"] = 0
+
         return bboxes

@@ -2,18 +2,23 @@
 The version numbers are according to [Semantic Versioning](http://semver.org/).
 (Versions prior to v1.0.0 might not strictly follow semantic versioning)
 
-## Release v0.0.6  (2023-??-??)
+## Release v0.0.7  (2023-??-??)
+### Added
+
+### Changed
+
+### Fixed
+
+### Removed
+
+## Release v0.0.6  (2023-02-20)
 ### Added
 - Adds option to fill bboxes with a transparent color using
   `draw_bboxes`
-### Changed
 
 ### Fixed
 - Fixes bug when OCRing images with no text and using `auto_rotate`
   (leading to a division by zero)
-
-### Removed
-
 
 ## Release v0.0.5  (2023-02-16)
 ### Added

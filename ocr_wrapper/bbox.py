@@ -594,8 +594,12 @@ def draw_bboxes(
     strokewidths = singe2list(strokewidths)
     fill_colors = singe2list(fill_colors)
     fill_opacities = singe2list(fill_opacities)
-    assert len(bboxes) == len(texts) == len(colors) == len(strokewidths) == len(fill_colors) == len(fill_opacities)
-
+    if not (len(bboxes) == len(texts) == len(colors) == len(strokewidths) == len(fill_colors) == len(fill_opacities)):
+        raise Exception(
+            f"Length of bboxes ({len(bboxes)}) and texts ({len(texts)}) and colors ({len(colors)}) and "
+            f"strokewidths ({len(strokewidths)}) and fill_colors ({len(fill_colors)}) and "
+            f"fill_opacities ({len(fill_opacities)}) must be the same"
+        )
     img = img.copy()  # Make a copy of the image to not modify the original
     draw = ImageDraw.Draw(img, "RGBA")
     width, height = img.size

@@ -4,7 +4,7 @@ import pytest
 from hypothesis import assume, given, settings
 from hypothesis.strategies import composite, floats, from_regex, integers, lists, text
 from ocr_wrapper import BBox
-from ocr_wrapper.bbox import draw_bboxes
+from ocr_wrapper.bbox import draw_bboxes, get_label2color_dict
 from PIL import Image
 
 filedir = os.path.dirname(__file__)
@@ -73,3 +73,14 @@ def test_draw_bbox(
         max_augment=maxaugment,
         strokewidths=strokewidths,
     )
+
+
+@given(lists(elements=text()))
+def test_get_label2color_dict(labels):
+    d = get_label2color_dict(labels)
+    assert len(d) == len(set(labels))
+    # Check that all colors are unique if we have <= 64 labels and we have repetitions otherwise
+    if len(labels) <= 64:
+        assert len(d.values()) == len(set(d.values()))
+    else:
+        assert len(d.values()) == 64

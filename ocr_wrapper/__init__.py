@@ -3,7 +3,7 @@ from .azure import AzureOCR
 from .google_ocr import GoogleOCR
 from .paddleocr import PaddleOCR
 from .easy_ocr import EasyOCR
-from .bbox import BBox, draw_bboxes
+from .bbox import BBox, draw_bboxes, get_label2color_dict
 from .ocr_wrapper import OcrWrapper
 
 __all__ = [
@@ -14,5 +14,6 @@ __all__ = [
     "EasyOCR",
     "BBox",
     "draw_bboxes",
+    "get_label2color_dict",
     "OcrWrapper",
 ]

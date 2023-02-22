@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import json
 import os
 from dataclasses import dataclass
 from random import random
@@ -10,6 +11,38 @@ from uuid import uuid4
 from PIL import Image, ImageColor, ImageDraw, ImageFont
 from shapely import affinity
 from shapely.geometry import Polygon
+
+
+def get_label2color_dict(labels: list[str]) -> dict[str, str]:
+    """
+    Given a list of labels, returns a dictionary mapping labels to colors in hex format (e.g. #a3f2c3)
+
+    Maximally divergent colors are assigned if possible and red hues are avoided since they should be reserved for
+    errors etc.
+
+    There are multiple color palletes that will be automatically chosen depending on the number of labels and can be found in
+    pallet.json. The smallest pallet that can fit all labels will be chosen. If the number of labels is larger than 64,
+    the largest pallet will repeat after 64 colors
+    """
+    labels = sorted(list(set(labels)))  # Remove duplicates
+    # Load the color pallets from pallets.json
+    with open(os.path.join(os.path.dirname(__file__), "pallets.json"), "r") as f:
+        pallets = json.load(f)
+
+    assert len(pallets) > 0, "No pallets found in pallets.json"
+
+    # Find the smallest color pallet that has enough colors for the number of labels we have
+    pallet = []  # Make static checkers happy, otherwise they can think that pallet might be unbound
+    for pallet in pallets:
+        if len(pallet) >= len(labels):
+            break
+
+    # Create a dictionary mapping labels to colors
+    label2color = {}
+    for i, label in enumerate(labels):
+        label2color[label] = pallet[i % len(pallet)]
+
+    return label2color
 
 
 @dataclass

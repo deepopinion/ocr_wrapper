@@ -4,7 +4,7 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 
 ## Release v0.0.7  (2023-??-??)
 ### Added
-
+- Added option to define a text brightness in `draw_bboxes` to make the text more readable
 ### Changed
 
 ### Fixed

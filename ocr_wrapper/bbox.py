@@ -62,7 +62,9 @@ def get_label2color_dict(labels: list[str]) -> dict[str, str]:
 
     There are multiple color palletes that will be automatically chosen depending on the number of labels and can be found in
     pallet.json. The smallest pallet that can fit all labels will be chosen. If the number of labels is larger than 64,
-    the largest pallet will repeat after 64 colors
+    the largest pallet will repeat after 64 colors.
+
+    https://medialab.github.io/iwanthue/ was used to generate the palletes.
     """
     labels = sorted(list(set(labels)))  # Remove duplicates
     # Load the color pallets from pallets.json
@@ -627,6 +629,7 @@ def draw_bboxes(
     fill_opacities: Union[list[float], float] = 0.0,
     fontsize: int = 10,
     max_augment: float = 0.0,  # Amount of to randomly change position of the bbox (for easier interpretation wiht overlapping bboxes)
+    text_goal_brightness: Optional[float] = None,
 ):
     """Draws bounding boxes with texts, colors, etc. on a PIL image
 
@@ -653,6 +656,7 @@ def draw_bboxes(
         max_augment (float): The maximum amount of random position change for the bounding boxes.
             A float between 0 and 1. This is useful when there are overlapping bounding boxes and
             one needs to be shifted a bit for better visibility. Defaults to 0.
+        text_goal_brightness (float): The goal brightness for the text. If None, the text will be drawn in the original color.
 
     Returns:
         (PIL.Image.Image): A copy of the image with the bounding boxes and text drawn on it.
@@ -699,6 +703,8 @@ def draw_bboxes(
             draw.polygon(bbox.get_float_list(), outline=color, fill=fill_color, width=strokewidth)
 
         # Draw text above box
+        if text_goal_brightness is not None:
+            color = get_color_with_defined_brightness(color, text_goal_brightness)
         if text != "" and text is not None:
             draw.text(
                 (bbox.TLx + 10, bbox.TLy - fontsize - 3),

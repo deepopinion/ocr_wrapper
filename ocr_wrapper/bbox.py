@@ -13,6 +13,46 @@ from shapely import affinity
 from shapely.geometry import Polygon
 
 
+from PIL import ImageColor
+
+
+def get_color_with_defined_brightness(color, goal_brightness=0.5):
+    """
+    Darkens a color represented in hex code.
+
+    Arguments:
+    color -- a string representing the color in hex code (e.g. "#FF0000" for red) or a color name from Pillow
+    goal_brightness -- a float representing the desired brightness level of the color.
+
+    Returns:
+    A string representing the darkened color in hex code.
+    """
+    try:
+        red, green, blue = ImageColor.getcolor(color, "RGB")
+    except ValueError:
+        try:
+            red, green, blue = ImageColor.getrgb(color)
+        except ValueError:
+            return color
+
+    # Calculate the original brightness level of the color
+    brightness = (red + green + blue) / 3 / 255
+
+    # Calculate the new brightness level
+    new_brightness = goal_brightness
+    scale_factor = new_brightness / (brightness + 0.0001)  # Epsilon to prevent dib by zero
+
+    # Darken the RGB values by the given factor and scale the values to achieve the desired brightness level
+    red = min(255, int(red * scale_factor))
+    green = min(255, int(green * scale_factor))
+    blue = min(255, int(blue * scale_factor))
+
+    # Convert the darkened RGB values back to hex code
+    dark_hex = "#{:02x}{:02x}{:02x}".format(red, green, blue)
+
+    return dark_hex
+
+
 def get_label2color_dict(labels: list[str]) -> dict[str, str]:
     """
     Given a list of labels, returns a dictionary mapping labels to colors in hex format (e.g. #a3f2c3)

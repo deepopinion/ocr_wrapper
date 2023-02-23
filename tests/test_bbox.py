@@ -1,11 +1,19 @@
 import os
 
+import ocr_wrapper
 import pytest
 from hypothesis import assume, given, settings
-from hypothesis.strategies import composite, floats, from_regex, integers, lists, text
+from hypothesis.strategies import (
+    composite,
+    floats,
+    from_regex,
+    integers,
+    lists,
+    text,
+)
 from ocr_wrapper import BBox
 from ocr_wrapper.bbox import draw_bboxes, get_label2color_dict
-from PIL import Image
+from PIL import Image, ImageColor
 
 filedir = os.path.dirname(__file__)
 DATA_DIR = os.path.join(filedir, "data")
@@ -84,3 +92,14 @@ def test_get_label2color_dict(labels):
         assert len(d.values()) == len(set(d.values()))
     else:
         assert len(d.values()) == 64
+
+
+@given(
+    color=from_regex(color_code_regex),
+    goal_brightness=floats(min_value=0, max_value=1),
+)
+def test_get_color_with_defined_brightness(color, goal_brightness):
+    """Test that we can get a color with a defined brightness."""
+    color = ocr_wrapper.bbox.get_color_with_defined_brightness(color, goal_brightness)
+    # Check we got a valid color
+    assert ImageColor.getcolor(color, "RGB") is not None

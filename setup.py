@@ -13,6 +13,6 @@ setup(
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",
     ],
-    install_requires=["Pillow", "Shapely"],
+    install_requires=["Pillow", "Shapely", "pdf2image"],
     zip_safe=False,
 )

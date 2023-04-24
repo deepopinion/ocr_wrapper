@@ -13,6 +13,6 @@ setup(
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",
     ],
-    install_requires=["Pillow", "Shapely", "pdf2image"],
+    install_requires=["Pillow", "Shapely", "pdf2image", "matplotlib", "numpy", "scikit-learn", "scipy"],
     zip_safe=False,
 )

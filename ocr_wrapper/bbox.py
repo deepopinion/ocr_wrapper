@@ -104,20 +104,6 @@ class BBox:
     original_width: int  # Width of the image the bounding box is on, in pixels
     original_height: int  # Height of the image the bounding box is on, in pixels
 
-    def __init__(self, coords: Union[list, tuple], original_size: Union[list, tuple]):
-        """
-        Args:
-            coords: A 8-list or 8-tuple in the following order:
-                (TLx, TLy, TRx, TRy, BRx, BRy, BLx, BLy)
-            original_size: The size of the image the bounding box is on as (width, height), in pixels
-        """
-        assert len(coords) == 8, f"Bounding box coordinates must be a sequence of length 8, but was {coords}"
-        assert len(original_size) == 2, f"Original size must be a sequence of length 2, but was {original_size}"
-        self.coords = coords
-        self.original_size = original_size
-
-        self.__post_init__()
-
     @property
     def coords(self):
         return (self.TLx, self.TLy, self.TRx, self.TRy, self.BRx, self.BRy, self.BLx, self.BLy)
@@ -187,7 +173,11 @@ class BBox:
             raise ValueError(
                 f"Normalized coords must be in the range [0,1], but got {coords}. Use BBox.from_pixels() if your coords are in pixels."
             )
-        return cls(coords, original_size)
+        if not len(coords) == 8:
+            raise ValueError(f"Bounding box coordinates must be a sequence of length 8, but was {coords}")
+        if not len(original_size) == 2:
+            raise ValueError(f"Original size must be a sequence of length 2, but was {original_size}")
+        return cls(*coords, *original_size)
 
     @classmethod
     def from_pixels(cls, coords: Union[list, tuple], original_size: Union[list, tuple]):
@@ -196,14 +186,11 @@ class BBox:
             raise ValueError(
                 f"Pixel coords must be integers, but got {coords}. Use BBox.from_normalized() if your coords are normalized."
             )
-        return cls([c / s for c, s in zip(coords, original_size * 4)], original_size)
-
-    @classmethod
-    def from_pixels_xywh(cls, xywh: tuple[int, int, int, int], original_size: Union[list, tuple]):
-        """Creates a BBox from the upper left corner, width and height"""
-        x, y, w, h = xywh
-        coords = (x, y, x + w, y, x + w, y + h, x, y + h)
-        return cls.from_pixels(coords, original_size)
+        if not len(coords) == 8:
+            raise ValueError(f"Bounding box coordinates must be a sequence of length 8, but was {coords}")
+        if not len(original_size) == 2:
+            raise ValueError(f"Original size must be a sequence of length 2, but was {original_size}")
+        return cls(*[c / s for c, s in zip(coords, original_size * 4)], *original_size)
 
     @classmethod
     def from_normalized_bounds(cls, bounds: tuple[float, float, float, float], original_size: Union[list, tuple]):

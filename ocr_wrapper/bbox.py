@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import dataclasses
 import json
 import os
 from dataclasses import dataclass
+from dataclasses_json import dataclass_json
 from random import random
 from typing import Optional, Union
 from uuid import uuid4
@@ -87,6 +87,7 @@ def get_label2color_dict(labels: list[str]) -> dict[str, str]:
     return label2color
 
 
+@dataclass_json
 @dataclass
 class BBox:
     """A class modeling the different forms of bounding boxes"""
@@ -99,6 +100,7 @@ class BBox:
     BRy: Union[float, int]
     BLx: Union[float, int]  # Bottom Right
     BLy: Union[float, int]
+    orig_size: Optional[tuple[int, int]] = None # The original size of the image the bounding box was extracted from
     in_pixels: bool = (
         False  # If True, the coordinates are absolute pixel values, otherwise they are relative in the range [0, 1]
     )
@@ -237,11 +239,6 @@ class BBox:
         return BBox(x1, y1, x2, y1, x2, y2, x1, y2, in_pixels=False, text=text, label=label)
 
     @staticmethod
-    def from_dict(dictionary):
-        """Creates a BBox from a dictionary"""
-        return BBox(**dictionary)
-
-    @staticmethod
     def from_labelstudio_coords(coord_dict):
         """Given a coordinates dictionary, in the format supplied by LabelStudio, returns a BBox instance"""
         x, y, width, height = [
@@ -268,6 +265,7 @@ class BBox:
             BLx=clip(x),
             BLy=clip(y + height),
             in_pixels=False,
+            label=coord_dict.get("label", [None])[0],
         )
 
     @staticmethod
@@ -292,10 +290,18 @@ class BBox:
             typedicts[j["type"]] = j
 
         # Check if rectangle entry is there (this should always be given) and extract bbox data from it
-        if "rectangle" not in typedicts:
+        if "rectangle" not in typedicts and "rectanglelabels" not in typedicts:
             raise Exception("No rectangle entry found in list of dicts. This entry is mandatory")
+        typedicts["rectangle"] = typedicts.get("rectangle") or typedicts.get("rectanglelabels")
         bbox = BBox.from_labelstudio_coords(typedicts["rectangle"]["value"])
 
+        # Add the original size of the image to the bbox
+        if "original_width" in typedicts["rectangle"] and "original_height" in typedicts["rectangle"]:
+            bbox.orig_size = (
+                typedicts["rectangle"]["original_width"],
+                typedicts["rectangle"]["original_height"]
+                )
+        
         # If a textarea entry is given, get the OCR text from there
         if "textarea" in typedicts:
             text = typedicts["textarea"]["value"]["text"]
@@ -319,10 +325,6 @@ class BBox:
                 )
 
         return bbox
-
-    def to_dict(self):
-        """Returns content of this class as a dictionary"""
-        return dataclasses.asdict(self)
 
     def get_float_list(self) -> list[Union[float, int]]:
         """Returns coordinates from the bbox as a list"""
@@ -365,10 +367,14 @@ class BBox:
         ypos_list = self.get_ypos_list()
         return min(ypos_list), max(ypos_list)
 
-    def to_pixels(self, img_width: int, img_height: int) -> "BBox":
+    def to_pixels(self, img_width=None, img_height=None) -> "BBox":
         """Changes the coordinates to pixel coordinates"""
         if self.in_pixels:
             return self
+        if img_width is None and img_height is None:
+            if not self.orig_size:
+                raise Exception("No original image size given and no size stored in BBox")
+            img_width, img_height = self.orig_size
         return BBox(
             self.TLx * img_width,
             self.TLy * img_height,
@@ -378,14 +384,20 @@ class BBox:
             self.BRy * img_height,
             self.BLx * img_width,
             self.BLy * img_height,
+            orig_size=(img_width, img_height),
             text=self.text,
             label=self.label,
             in_pixels=True,
         )
 
-    def to_normalized(self, img_width, img_height):
+    def to_normalized(self, img_width=None, img_height=None):
         if not self.in_pixels:
             return self
+        # Try to get the image size from the BBox itself if not given
+        if img_width is None and img_height is None:
+            if not self.orig_size:
+                raise Exception("No original image size given and no size stored in BBox")
+            img_width, img_height = self.orig_size
 
         TLx, TLy, TRx, TRy, BRx, BRy, BLx, BLy = [
             min(max(val, 0.0), 1.0)
@@ -410,6 +422,7 @@ class BBox:
             BRy,
             BLx,
             BLy,
+            orig_size=(img_width, img_height),
             text=self.text,
             label=self.label,
             in_pixels=False,
@@ -420,9 +433,7 @@ class BBox:
         of the upper left, and lower right corner. Possible rotation of the bbox gets lost in
         this conversion!"""
         if self.in_pixels:
-            raise Exception(
-                "Getting bbox in layoutlm format is only supported for normalized bboxes (i.e. not in pixels)"
-            )
+            return self.to_normalized().get_layoutlm_format()
         # Recalculate coordinates using determined width and height
         xlist = [self.TLx, self.TRx, self.BLx, self.BRx]
         ylist = [self.TLy, self.TRy, self.BLy, self.BRy]
@@ -438,9 +449,7 @@ class BBox:
     def get_label_studio_format(self) -> list[dict]:
         """Returns data in the format needed by LabelStudio. Depending on whether text and label are part of the BBox, more or less dicts are returned"""
         if self.in_pixels:
-            raise Exception(
-                "Getting bbox in LabelStudio format is only supported for normalized bboxes (i.e. not in pixels)"
-            )
+            return self.to_normalized().get_label_studio_format()
         # Bring bounding box in the correct format
         xlist = [x * 100 for x in [self.TLx, self.TRx, self.BLx, self.BRx]]
         ylist = [y * 100 for y in [self.TLy, self.TRy, self.BLy, self.BRy]]
@@ -462,6 +471,8 @@ class BBox:
             "from_name": "bbox",
             "to_name": "image",
             "value": bbox,
+            "original_width": self.orig_size[0],
+            "original_height": self.orig_size[1],
         }
 
         # Build labels
@@ -472,6 +483,8 @@ class BBox:
                 "value": dict(labels=[self.label], **bbox),
                 "from_name": "label",
                 "to_name": "image",
+                "original_width": self.orig_size[0],
+                "original_height": self.orig_size[1],
             }
         else:
             labels = None
@@ -485,6 +498,8 @@ class BBox:
                 "to_name": "image",
                 "value": dict(text=[self.text], **bbox),
                 "score": 0.0,
+                "original_width": self.orig_size[0],
+                "original_height": self.orig_size[1],
             }
         else:
             textarea = None
@@ -580,7 +595,7 @@ class BBox:
         """Rotates the bbox by 90 degrees counter clockwise around (0,0)"""
         # Only works for normalized bboxes
         if self.in_pixels:
-            raise Exception("Rotation only supported for normalized bboxes")
+            self.to_normalized().rotate_90deg_ccw()
         # Get the polygon
         poly = self.get_shapely_polygon()
         # Rotate it

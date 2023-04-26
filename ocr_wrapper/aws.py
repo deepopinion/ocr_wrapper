@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import functools
-from typing import Optional, List
+from typing import Optional
 
 from PIL import Image
 from .bbox import BBox
@@ -45,14 +47,15 @@ class AwsOCR(OcrWrapper):
         return response
 
     @requires_boto
-    def _convert_ocr_response(self, response) -> List[BBox]:
+    def _convert_ocr_response(self, img, response) -> tuple[list[BBox], list[str]]:
         """Converts the response given by Google OCR to a list of BBox"""
-        bboxes = []
+        bboxes, texts = [], []
         # Iterate over all responses
         for block in response["Blocks"]:
             if block["BlockType"] != "WORD":
                 continue
             coords = [item for vert in block["Geometry"]["Polygon"] for item in [vert["X"], vert["Y"]]]
-            bbox = BBox.from_float_list(coords, text=block["Text"], in_pixels=False)
+            bbox = BBox.from_normalized(coords, original_size=img.size)
             bboxes.append(bbox)
-        return bboxes
+            texts.append(block["Text"])
+        return bboxes, texts

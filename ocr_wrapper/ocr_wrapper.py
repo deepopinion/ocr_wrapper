@@ -4,7 +4,7 @@ from hashlib import sha256
 
 import shelve
 from io import BytesIO
-from typing import Optional, Union
+from typing import Any, Optional
 
 from PIL import Image, ImageDraw, ImageOps
 from .bbox import BBox
@@ -46,12 +46,15 @@ class OcrWrapper(ABC):
         self.verbose = verbose
         self.extra = {}  # Extra information to be returned by ocr()
 
-    def ocr(self, img: Image.Image, return_extra: bool = False) -> Union[list[BBox], tuple[list[BBox], dict]]:
+    def ocr(self, img: Image.Image, return_extra: bool = False) -> tuple[list[BBox], list[str]]:
         """Returns OCR result as a list of normalized BBox
 
         Args:
             img: Image to be processed
-            return_extra: If True, returns a tuple of (bboxes, extra) where extra is a dict containing extra information
+            return_extra: If True, additionally returns a dict containing extra information given by the OCR engine.
+        Returns:
+            A tuple (bboxes, texts) containing a list of bounding boxes and a list of correspondig texts.
+            If ``return_extra`` is True, a triple (bboxes, texts, extra) is returned.
         """
         # Keep copy of original image
         original_img = img.copy()
@@ -61,10 +64,7 @@ class OcrWrapper(ABC):
         # Get response from an OCR engine
         response = self._get_ocr_response(img)
         # Convert the response to our internal format
-        bboxes = self._convert_ocr_response(response)
-        # Normalize all boxes
-        width, height = img.size
-        bboxes = [bbox.to_normalized(img_width=width, img_height=height) for bbox in bboxes]
+        bboxes, texts = self._convert_ocr_response(img, response)
 
         if self.auto_rotate and "document_rotation" in self.extra:
             angle = self.extra["document_rotation"]
@@ -74,8 +74,8 @@ class OcrWrapper(ABC):
             bboxes = [bbox.rotate(angle) for bbox in bboxes]
 
         if return_extra:
-            return bboxes, self.extra
-        return bboxes
+            return bboxes, texts, self.extra
+        return bboxes, texts
 
     @staticmethod
     def _resize_image(img: Image.Image, max_size: int) -> Image.Image:
@@ -92,25 +92,23 @@ class OcrWrapper(ABC):
         return img
 
     @abstractmethod
-    def _get_ocr_response(self, img: Image.Image):
+    def _get_ocr_response(self, img: Image.Image) -> Any:
         pass
 
     @abstractmethod
-    def _convert_ocr_response(self, response) -> list[BBox]:
+    def _convert_ocr_response(self, img: Image.Image, response) -> tuple[list[BBox], list[str]]:
         pass
 
     @staticmethod
-    def draw(image: Image.Image, boxes: list[BBox]):
+    def draw(image: Image.Image, boxes: list[BBox], texts: list[str]):
         """draw the bounding boxes over the original image to visualize result"""
         image = ImageOps.exif_transpose(image)
         if image.mode != "RGB":
             image = image.convert("RGB")
         draw = ImageDraw.Draw(image)
         all_text = []
-        for box in boxes:
-            unnormalized_box = box.to_pixels(*image.size)
-            corners = unnormalized_box.get_float_list()
-            text = box.text
+        for box, text in zip(boxes, texts):
+            corners = box.to_pixels()
             draw.polygon(corners, fill=None, outline="red")
             all_text.append(text)
         return image, " ".join(all_text)

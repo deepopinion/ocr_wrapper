@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import functools
 import numpy as np
 from PIL import Image
@@ -62,13 +64,14 @@ class PaddleOCR(OcrWrapper):
         return response
 
     @requires_paddle
-    def _convert_ocr_response(self, response) -> List[BBox]:
+    def _convert_ocr_response(self, img, response) -> tuple[list[BBox], list[str]]:
         """Converts the response given by Google OCR to a list of BBox"""
         paddle_resp, resize_ratio = response
-        bboxes = []
+        bboxes, texts = [], []
         for corners, (text, confidence) in paddle_resp:
             coords = [item * resize_ratio for vert in corners for item in vert]
 
-            bbox = BBox.from_float_list(coords, text=text, in_pixels=True)
+            bbox = BBox.from_pixels(coords, original_size=img.size)
             bboxes.append(bbox)
-        return bboxes
+            texts.append(text)
+        return bboxes, texts

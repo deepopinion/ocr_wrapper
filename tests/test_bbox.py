@@ -22,37 +22,37 @@ DATA_DIR = os.path.join(filedir, "data")
 @composite
 def bbox(draw):
     """Defines a strategy for generating valid BBox objects."""
-    x = draw(floats(min_value=0, max_value=1))
-    y = draw(floats(min_value=0, max_value=1))
-    width = draw(floats(min_value=1e-10, max_value=1))
-    height = draw(floats(min_value=1e-10, max_value=1))
+    x1 = draw(floats(min_value=0, max_value=1, exclude_max=True))
+    y1 = draw(floats(min_value=0, max_value=1, exclude_max=True))
+    x2 = draw(floats(min_value=x1, max_value=1, exclude_min=True))
+    y2 = draw(floats(min_value=y1, max_value=1, exclude_min=True))
 
     # Make sure the generated bbox is valid
-    assume(x + width <= 1)
-    assume(y + height <= 1)
+    assume(x1 < x2)
+    assume(y1 < y2)
 
-    return (x, y, width, height)
+    return (x1, y1, x2, y2)
 
 
 @settings(max_examples=1000)
-@given(xywh=bbox())
-def test_360deg_rotate_equality(xywh):
+@given(bounds=bbox())
+def test_360deg_rotate_equality(bounds):
     """Test that rotating a bbox by 360 degrees is the same as not rotating it."""
-    bbox = BBox.from_xywh(*xywh)
-    original = bbox.get_float_list()
+    bbox = BBox.from_normalized_bounds(bounds, original_size=(1000, 1000))
+    original = bbox.to_normalized()
     for _ in range(4):
         bbox = bbox.rotate(90)
 
-    assert pytest.approx(bbox.get_float_list(), abs=1e-2) == original
+    assert pytest.approx(bbox.to_normalized(), abs=1e-2) == original
 
 
 color_code_regex = r"^#[0-9a-fA-F]{6}$"
 
 
 @given(
-    xywh1=bbox(),
-    xywh2=bbox(),
-    xywh3=bbox(),
+    bounds1=bbox(),
+    bounds2=bbox(),
+    bounds3=bbox(),
     colors=lists(elements=from_regex(color_code_regex), min_size=3, max_size=3),
     fill_colors=lists(elements=from_regex(color_code_regex), min_size=3, max_size=3),
     texts=lists(elements=text(), min_size=3, max_size=3),
@@ -62,13 +62,13 @@ color_code_regex = r"^#[0-9a-fA-F]{6}$"
     strokewidths=integers(min_value=1, max_value=10),
 )
 def test_draw_bbox(
-    xywh1, xywh2, xywh3, colors, fill_colors, texts, fill_opacities, fontsize, maxaugment, strokewidths
+    bounds1, bounds2, bounds3, colors, fill_colors, texts, fill_opacities, fontsize, maxaugment, strokewidths
 ):
     """Test that drawing bboxes works."""
     img = Image.open(os.path.join(DATA_DIR, "ocr_test.png"))
-    bbox1 = BBox.from_xywh(*xywh1)
-    bbox2 = BBox.from_xywh(*xywh2)
-    bbox3 = BBox.from_xywh(*xywh3)
+    bbox1 = BBox.from_normalized_bounds(bounds1, original_size=img.size)
+    bbox2 = BBox.from_normalized_bounds(bounds2, original_size=img.size)
+    bbox3 = BBox.from_normalized_bounds(bounds3, original_size=img.size)
     bboxes = [bbox1, bbox2, bbox3]
     draw_bboxes(
         img,

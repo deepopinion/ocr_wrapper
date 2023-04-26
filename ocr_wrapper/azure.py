@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import functools
 import os
 import json
@@ -70,13 +72,14 @@ class AzureOCR(OcrWrapper):
         return read_result
 
     @requires_azure
-    def _convert_ocr_response(self, response) -> List[BBox]:
+    def _convert_ocr_response(self, img, response) -> tuple[list[BBox], list[str]]:
         """Converts the response given by Azure Read to a list of BBox"""
-        bboxes = []
+        bboxes, texts = [], []
         # Iterate over all responses
         for annotation in response.analyze_result.read_results:
             for line in annotation.lines:
                 for word in line.words:
-                    bbox = BBox.from_float_list(word.bounding_box, text=word.text, in_pixels=True)
+                    bbox = BBox.from_pixels(word.bounding_box, original_size=img.size)
                     bboxes.append(bbox)
-        return bboxes
+                    texts.append(word.text)
+        return bboxes, texts

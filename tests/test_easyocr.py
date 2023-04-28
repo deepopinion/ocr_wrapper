@@ -10,7 +10,7 @@ def test_easy_ocr():
     img = Image.open(os.path.join(DATA_DIR, "ocr_test.png"))
     ocr = EasyOCR(languages=["en"], width_thr=0.1)
 
-    bboxes, texts = ocr.ocr(img)
-    text = " ".join([str(t) for t in texts])
+    res = ocr.ocr(img)
+    text = " ".join([r["text"] for r in res])
     assert text == "This is a test."
-    assert all([b.original_size == img.size for b in bboxes])
+    assert all([r["bbox"].original_size == img.size for r in res])

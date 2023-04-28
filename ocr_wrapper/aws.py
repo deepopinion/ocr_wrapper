@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import functools
-from typing import Optional
+from typing import Optional, Union
 
 from PIL import Image
 from .bbox import BBox
@@ -47,15 +47,14 @@ class AwsOCR(OcrWrapper):
         return response
 
     @requires_boto
-    def _convert_ocr_response(self, img, response) -> tuple[list[BBox], list[str]]:
-        """Converts the response given by Google OCR to a list of BBox"""
-        bboxes, texts = [], []
+    def _convert_ocr_response(self, img, response) -> list[dict[str, Union[BBox, str]]]:
+        """Converts the response given by AWS Textract to a list of BBox"""
+        result = []
         # Iterate over all responses
         for block in response["Blocks"]:
             if block["BlockType"] != "WORD":
                 continue
             coords = [item for vert in block["Geometry"]["Polygon"] for item in [vert["X"], vert["Y"]]]
             bbox = BBox.from_normalized(coords, original_size=img.size)
-            bboxes.append(bbox)
-            texts.append(block["Text"])
-        return bboxes, texts
+            result.append({"bbox": bbox, "text": block["Text"]})
+        return result

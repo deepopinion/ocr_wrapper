@@ -4,7 +4,7 @@ from hashlib import sha256
 
 import shelve
 from io import BytesIO
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 from PIL import Image, ImageDraw, ImageOps
 from .bbox import BBox
@@ -46,15 +46,17 @@ class OcrWrapper(ABC):
         self.verbose = verbose
         self.extra = {}  # Extra information to be returned by ocr()
 
-    def ocr(self, img: Image.Image, return_extra: bool = False) -> tuple[list[BBox], list[str]]:
+    def ocr(self, img: Image.Image, return_extra: bool = False) -> list[dict[str, Union[BBox, str]]]:
         """Returns OCR result as a list of normalized BBox
 
         Args:
             img: Image to be processed
             return_extra: If True, additionally returns a dict containing extra information given by the OCR engine.
         Returns:
-            A tuple (bboxes, texts) containing a list of bounding boxes and a list of correspondig texts.
-            If ``return_extra`` is True, a triple (bboxes, texts, extra) is returned.
+            A list of dicts, one per bounding box detected. Each dict contains the keys "bbox" and "text", specifying the
+            location of the bounding box and the text contained respectively.
+            If ``return_extra`` is True, returns a tuple with the usual return list, and a dict containing extra
+            information given by the OCR engine.
         """
         # Keep copy of original image
         original_img = img.copy()
@@ -64,18 +66,19 @@ class OcrWrapper(ABC):
         # Get response from an OCR engine
         response = self._get_ocr_response(img)
         # Convert the response to our internal format
-        bboxes, texts = self._convert_ocr_response(img, response)
+        result = self._convert_ocr_response(img, response)
 
         if self.auto_rotate and "document_rotation" in self.extra:
             angle = self.extra["document_rotation"]
             # Rotate image
             self.extra["rotated_image"] = rotate_image(original_img, angle)
             # Rotate boxes. The given rotation will be done counter-clockwise
-            bboxes = [bbox.rotate(angle) for bbox in bboxes]
+            for r in result:
+                r["bbox"] = r["bbox"].rotate(angle)
 
         if return_extra:
-            return bboxes, texts, self.extra
-        return bboxes, texts
+            return result, self.extra
+        return result
 
     @staticmethod
     def _resize_image(img: Image.Image, max_size: int) -> Image.Image:
@@ -96,7 +99,7 @@ class OcrWrapper(ABC):
         pass
 
     @abstractmethod
-    def _convert_ocr_response(self, img: Image.Image, response) -> tuple[list[BBox], list[str]]:
+    def _convert_ocr_response(self, img: Image.Image, response) -> list[dict[str, Union[BBox, str]]]:
         pass
 
     @staticmethod

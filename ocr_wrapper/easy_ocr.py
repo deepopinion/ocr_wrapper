@@ -62,13 +62,12 @@ class EasyOCR(OcrWrapper):
         return response
 
     @requires_easyocr
-    def _convert_ocr_response(self, img, response) -> tuple[list[BBox], list[str]]:
+    def _convert_ocr_response(self, img, response) -> list[dict[str, Union[BBox, str]]]:
         """Converts the response given by EasyOCR to a list of BBox"""
-        bboxes, texts = [], []
+        result = []
         for bbox, text, score in response:
             # EasyOCR bbox is a nested tuple, so we flatten it
             flattened = [xy for coord in bbox for xy in coord]
             bbox = BBox.from_pixels(flattened, original_size=img.size)
-            bboxes.append(bbox)
-            texts.append(text)
-        return bboxes, texts
+            result.append({"bbox": bbox, "text": text})
+        return result

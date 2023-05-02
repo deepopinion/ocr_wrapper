@@ -182,15 +182,17 @@ class BBox:
     @classmethod
     def from_pixels(cls, coords: Union[list, tuple], original_size: Union[list, tuple]):
         """Creates a BBox from pixel values"""
-        if any(0.001 <= c % 1 <= 0.999 for c in coords):
-            raise ValueError(
-                f"Pixel coords must be integers, but got {coords}. Use BBox.from_normalized() if your coords are normalized."
-            )
         if not len(coords) == 8:
             raise ValueError(f"Bounding box coordinates must be a sequence of length 8, but was {coords}")
         if not len(original_size) == 2:
             raise ValueError(f"Original size must be a sequence of length 2, but was {original_size}")
-        return cls(*[c / s for c, s in zip(coords, original_size * 4)], *original_size)
+
+        normalized_coords = [c / s for c, s in zip(coords, original_size * 4)]
+        if not all(-0.001 <= c <= 1.001 for c in normalized_coords):
+            raise ValueError(
+                f"Pixel coords must not be larger than the original image size, but coords {coords} for original size {original_size}."
+            )
+        return cls(*normalized_coords, *original_size)
 
     @classmethod
     def from_normalized_bounds(cls, bounds: tuple[float, float, float, float], original_size: Union[list, tuple]):

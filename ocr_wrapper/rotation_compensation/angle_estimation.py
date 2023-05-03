@@ -98,6 +98,12 @@ def _kde_angle_estimation(angle_estimates, max_remove_zero_proportion=0.7, verbo
     Returns:
         A tuple containing the peak angle, the peak value, and a figure object containing the KDE plot
     """
+    # Short circuit some invalid inputs
+    if len(angle_estimates) == 0:
+        return 0, 0, None # no bboxes
+    if len(set(angle_estimates)) == 1:
+        return angle_estimates[0], 0, None # all bboxes are the same angle
+    
     # Calc proportion of angles that are zero
     zero_proportion = np.sum(np.array(angle_estimates) == 0.0) / len(angle_estimates)
     if verbose:
@@ -155,6 +161,10 @@ def _histogram_angle_estimation(
     Returns:
     float: The dominant rotation angle in degrees.
     """
+    # Short circuit some invalid inputs
+    if len(angle_estimates) == 0:
+        return 0 # no bboxes
+    
     # Calc proportion of angles that are zero
     zero_proportion = np.sum(np.array(angle_estimates) == 0.0) / len(angle_estimates)
     if verbose:

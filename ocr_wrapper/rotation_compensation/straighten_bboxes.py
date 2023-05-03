@@ -151,7 +151,8 @@ def straighten_bboxes(
         if verbose:
             print(f"KDE: angle: {angle:.2f}")
             print(f"KDE: value: {value:.2f}")
-            fig.show()
+            if fig:
+                fig.show()
     elif method == "histogram":
         angle = _histogram_angle_estimation(
             angles,

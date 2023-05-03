@@ -46,7 +46,9 @@ class OcrWrapper(ABC):
         self.verbose = verbose
         self.extra = {}  # Extra information to be returned by ocr()
 
-    def ocr(self, img: Image.Image, return_extra: bool = False) -> list[dict[str, Union[BBox, str]]]:
+    def ocr(
+        self, img: Image.Image, return_extra: bool = False
+    ) -> Union[list[dict[str, Union[BBox, str]]], tuple[list[dict[str, Union[BBox, str]]], dict[str, Any]]]:
         """Returns OCR result as a list of normalized BBox
 
         Args:

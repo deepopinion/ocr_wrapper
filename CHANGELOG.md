@@ -1,15 +1,20 @@
-# UCN Changelog
+# ocr_wrapper Changelog
 The version numbers are according to [Semantic Versioning](http://semver.org/).
 (Versions prior to v1.0.0 might not strictly follow semantic versioning)
 
-## Release v0.0.7  (2023-??-??)
+## Release v1.0.0  (2023-05-03)
 ### Added
 - Added option to define a text brightness in `draw_bboxes` to make the text more readable
+- Streamlit demo to quickly test OCR solutions
 ### Changed
-
-### Fixed
-
+- Major rewrite of the `BBox` class to improve data consistency
+- BBoxes now save the image size of the image they are on, to enable conversion from absolute to relative coordinates without additional data
+- Instead of a list of `BBox`, `OcrWrapper.ocr()` now returns a list of dicts with keys  "bbox" and "text", which contain the `BBox` instance and its text respectively
 ### Removed
+- Text and label are no longer part of the `BBox` object. BBoxes are intended to purely represent a quadrilateral on an image. This e.g. enables their usage in computer vision
+- A lot of specialized getters and constructors have been removed. The principal formats offered by `BBox` are any combination of:
+  - 8-tuple (TLx, TLy, TRx, ...) quadrilateral or 4-tuple (x1, y1, x2, y2) axis-aligned bounds
+  - Relative (0-1) or absolute (px) coordinates
 
 ## Release v0.0.6  (2023-02-20)
 ### Added

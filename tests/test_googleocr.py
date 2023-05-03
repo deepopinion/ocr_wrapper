@@ -6,20 +6,6 @@ import pytest
 filedir = os.path.dirname(__file__)
 DATA_DIR = os.path.join(filedir, "data")
 
-
-@pytest.fixture
-def ocr():
-    return GoogleOCR()
-
-
-def test_google_ocr(ocr):
-    img = Image.open(os.path.join(DATA_DIR, "ocr_test_big.png"))
-
-    res = ocr.ocr(img)
-    text = " ".join([str(r.text) for r in res])
-    assert text == "This is a test ."
-
-
 # Define filename, rotation list
 rotation_test_documents = [
     # English text
@@ -40,11 +26,9 @@ rotation_test_documents = [
 ]
 
 
-@pytest.mark.parametrize("filename, rotation", rotation_test_documents)
-def test_google_ocr_rotation(ocr, filename, rotation):
-    img = Image.open(os.path.join(DATA_DIR, filename))
-    _, extras = ocr.ocr(img, return_extra=True)
-    assert extras["document_rotation"] == rotation
+@pytest.fixture
+def ocr():
+    return GoogleOCR()
 
 
 @pytest.fixture
@@ -59,14 +43,30 @@ def unrotated_bboxes(ocr):
     return ocr.ocr(img)
 
 
+def test_google_ocr(ocr):
+    img = Image.open(os.path.join(DATA_DIR, "ocr_test_big.png"))
+
+    res = ocr.ocr(img)
+    text = " ".join([r["text"] for r in res])
+    assert text == "This is a test ."
+    assert all([r["bbox"].original_size == img.size for r in res])
+
+
+@pytest.mark.parametrize("filename, rotation", rotation_test_documents)
+def test_google_ocr_rotation(ocr, filename, rotation):
+    img = Image.open(os.path.join(DATA_DIR, filename))
+    _, extras = ocr.ocr(img, return_extra=True)
+    assert extras["document_rotation"] == rotation
+
+
 def test_google_ocr_auto_rotation(unrotated_bboxes, ocr_with_auto_rotate):
     rotated_images_list = ["ocr_test_90deg.png", "ocr_test_180deg.png", "ocr_test_270deg.png"]
 
     for img_filename in rotated_images_list:
         img = Image.open(os.path.join(DATA_DIR, img_filename))
         rotated_bboxes = ocr_with_auto_rotate.ocr(img)
-        for unrot_bbox, rot_bbox in zip(unrotated_bboxes, rotated_bboxes):
-            assert unrot_bbox.get_float_list() == pytest.approx(rot_bbox.get_float_list(), abs=0.1)
+        for unrot, rot in zip(unrotated_bboxes, rotated_bboxes):
+            assert unrot["bbox"].to_normalized() == pytest.approx(rot["bbox"].to_normalized(), abs=0.1)
 
 
 def test_document_without_text(ocr_with_auto_rotate):

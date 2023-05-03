@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 from time import sleep
 import os
-from typing import Optional, List
+from typing import Optional, Union
 
 from PIL import Image
 from .bbox import BBox
@@ -179,21 +179,21 @@ class GoogleOCR(OcrWrapper):
         return response
 
     @requires_gcloud
-    def _convert_ocr_response(self, response) -> List[BBox]:
+    def _convert_ocr_response(self, img, response) -> list[dict[str, Union[BBox, str]]]:
         """Converts the response given by Google OCR to a list of BBox"""
         # Iterate over all responses except the first. The first is for the whole document -> ignore
-        bboxes = []
+        result = []
         for annotation in response.text_annotations[1:]:
             text = annotation.description
             coords = [item for vert in annotation.bounding_poly.vertices for item in [vert.x, vert.y]]
-            bbox = BBox.from_float_list(coords, text=text, in_pixels=True)
-            bboxes.append(bbox)
+            bbox = BBox.from_pixels(coords, original_size=img.size)
+            result.append({"bbox": bbox, "text": text})
 
         # Determine the rotation of the document
-        if len(bboxes) > 0:
+        if len(result) > 0:
             rotation = get_rotation(*get_mean_symbol_deltas(response))
             self.extra["document_rotation"] = rotation
         else:  # If there is no OCR text, assume rotation is 0
             self.extra["document_rotation"] = 0
 
-        return bboxes
+        return result

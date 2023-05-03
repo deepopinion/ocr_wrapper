@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import functools
 import os
 import json
 import time
 from io import BytesIO
-from typing import Optional, List
+from typing import Optional, Union
 
 from PIL import Image
 from .bbox import BBox
@@ -70,13 +72,13 @@ class AzureOCR(OcrWrapper):
         return read_result
 
     @requires_azure
-    def _convert_ocr_response(self, response) -> List[BBox]:
+    def _convert_ocr_response(self, img, response) -> list[dict[str, Union[BBox, str]]]:
         """Converts the response given by Azure Read to a list of BBox"""
-        bboxes = []
+        result = []
         # Iterate over all responses
         for annotation in response.analyze_result.read_results:
             for line in annotation.lines:
                 for word in line.words:
-                    bbox = BBox.from_float_list(word.bounding_box, text=word.text, in_pixels=True)
-                    bboxes.append(bbox)
-        return bboxes
+                    bbox = BBox.from_pixels(word.bounding_box, original_size=img.size)
+                    result.append({"bbox": bbox, "text": word.text})
+        return result

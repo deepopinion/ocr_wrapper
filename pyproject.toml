@@ -1,2 +1,38 @@
+[project]
+name = "ocr_wrapper"
+version = "1.0.0"
+license.file = "LICENSE.md"
+authors = [{name = "DeepOpinion", email = "hello@deepopinion.ai"}]
+urls.repository = "https://github.com/deepopinion/ocr_wrapper"
+
+dependencies = [
+    "dataclasses-json",
+    "pdf2image",
+    "pillow",
+    "shapely",
+]
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black~=23.3",
+    "hypothesis",
+    "pytest",
+]
+ocr = [
+    "easyocr",
+    "paddleocr>=2.0.1",
+    "google-cloud-vision",
+    "azure-cognitiveservices-vision-computervision",
+    "boto3",
+]
+
 [tool.black]
 line-length = 119
+
+[tool.setuptools]
+py-modules = ["ocr_wrapper"]

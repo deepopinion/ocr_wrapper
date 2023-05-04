@@ -29,16 +29,18 @@ Depending on your operating system you might also have to install the Noto Sans 
 ## Usage
 Different OCR solutions are provided via the classes `GoogleOCR`, `AwsOCR`, `AzureOCR`, `EasyOCR`, and `PaddleOCR`.
 
-All solutions have built in caching support, which can be activated by supplying a `cache_file` argument in the constructor. If a page has already been OCRed, the result from the cache will be used. Once an OCR class has been instantiated, an image can be OCRed with the `.ocr` Method which accepts an image in PIL format.
+All solutions have built in caching support, which can be activated by supplying a `cache_file` argument in the constructor. If a page has already been OCRed, the result from the cache will be used. Once an OCR class has been instantiated, an image can be OCRed with the `.ocr` method, which accepts an image in `PIL.Image.Image` format.
 
-The result will be a list of dicts, each representing one chunk of text (usually, one word). Each dict contains the following keys:
+The result will be a list of dicts, each representing one chunk of text (usually, one word). Each dict contains at least the following keys:
 - `bbox`: A `ocr_wrapper.BBox` instance that represents the location of the bounding quadrilateral of the detection
 - `text`: The text that was detected
+
+Specific OCR engines may add other keys to return additional information about a bounding box.
 
 To easily visualize bounding boxes, the library also offers the method `draw_bboxes`. See `tryme.ipynb` for a minimal code example.
 
 ### GoogleOCR
-The credentials for Google OCR will be obtained from one of the following:
+The credentials for Google OCR will be obtained from one of the following sources, in this order:
 - The environment variable `GOOGLE_APPLICATION_CREDENTIALS`
 - A credentials file `~/.config/gcloud/credentials.json`
 - A credentials file `/credentials.json`

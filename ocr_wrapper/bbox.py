@@ -325,8 +325,8 @@ def draw_bboxes(
     ):
         fill_color = color2rgba(fill_color, fill_opacity)
 
+        coords = bbox.to_pixels()
         if color is not None or fill_color is not None:
-            coords = bbox.to_pixels()
             coords = [coord + random.uniform(-max_augment, max_augment) * s for coord, s in zip(coords, img.size * 4)]
             draw.polygon(coords, outline=color, fill=fill_color, width=strokewidth)
 
@@ -335,7 +335,7 @@ def draw_bboxes(
             color = get_color_with_defined_brightness(color, text_goal_brightness)
         if text != "" and text is not None:
             draw.text(
-                (bbox.TLx + 10, bbox.TLy - fontsize - 3),
+                (coords[0] + 10, coords[1] - fontsize - 3),
                 text=text,
                 fill=color,
                 font=font,

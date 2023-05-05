@@ -2,6 +2,14 @@
 The version numbers are according to [Semantic Versioning](http://semver.org/).
 (Versions prior to v1.0.0 might not strictly follow semantic versioning)
 
+## Release v1.1.0  (2023-??-??)
+### Added
+- Added the output of confidence scores to GoogleOCR
+### Changed
+
+### Removed
+
+
 ## Release v1.0.0  (2023-05-03)
 ### Added
 - Added option to define a text brightness in `draw_bboxes` to make the text more readable

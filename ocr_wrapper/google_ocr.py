@@ -104,6 +104,25 @@ def get_word_and_language_codes(response):
     return word_and_language_codes
 
 
+def _get_words_bboxes_confidences(response):
+    """Given an ocr response, returns a list of tuples of word bounding boxes and confidences"""
+    words, bboxes, confidences = [], [], []
+
+    for page in response.full_text_annotation.pages:
+        for block in page.blocks:
+            for paragraph in block.paragraphs:
+                for word in paragraph.words:
+                    word_text = "".join([symbol.text for symbol in word.symbols])
+                    word_confidence = word.confidence
+                    word_bounding_box = word.bounding_box.vertices
+
+                    words.append(word_text)
+                    bboxes.append(word_bounding_box)
+                    confidences.append(word_confidence)
+
+    return words, bboxes, confidences
+
+
 class GoogleOCR(OcrWrapper):
     """
     A class that provides OCR functionality using Google Cloud Vision API.
@@ -179,15 +198,15 @@ class GoogleOCR(OcrWrapper):
         return response
 
     @requires_gcloud
-    def _convert_ocr_response(self, img, response) -> list[dict[str, Union[BBox, str]]]:
+    def _convert_ocr_response(self, img, response) -> list[dict[str, Union[BBox, str, float]]]:
         """Converts the response given by Google OCR to a list of BBox"""
         # Iterate over all responses except the first. The first is for the whole document -> ignore
+        words, bboxes, confidences = _get_words_bboxes_confidences(response)
         result = []
-        for annotation in response.text_annotations[1:]:
-            text = annotation.description
-            coords = [item for vert in annotation.bounding_poly.vertices for item in [vert.x, vert.y]]
+        for word, bbox, confidence in zip(words, bboxes, confidences):
+            coords = [item for vert in bbox for item in [vert.x, vert.y]]
             bbox = BBox.from_pixels(coords, original_size=img.size)
-            result.append({"bbox": bbox, "text": text})
+            result.append({"bbox": bbox, "text": word, "confidence": confidence})
 
         # Determine the rotation of the document
         if len(result) > 0:

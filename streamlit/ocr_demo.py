@@ -19,6 +19,8 @@ def whiten_image(img: Image.Image, amount: float) -> Image.Image:
 uploaded_file = st.file_uploader("Choose a file")
 # Allow selection of whether to output ocr box order
 output_order = st.checkbox("Output OCR box order")
+output_text = st.checkbox("Output OCR text")
+show_confidence = st.checkbox("Show confidence (low confidence is a darker blue)")
 
 if uploaded_file is not None:
     bytes_data = uploaded_file.getvalue()
@@ -40,15 +42,25 @@ if uploaded_file is not None:
         if output_order:
             texts = [str(i) for i in list(range(len(bboxes)))]
         else:
-            texts = ""
+            texts = ["" for _ in bboxes]
+
+        if output_text:
+            texts = [t + " " + b["text"] for t, b in zip(texts, bboxes)]
+
+        if show_confidence:
+            # Normalize confidence to be between 0 and 1
+            cmin, cmax = min(bbox["confidence"] for bbox in bboxes), max(bbox["confidence"] for bbox in bboxes)
+            fill_opacities = [1 - ((bbox["confidence"] - cmin) / (cmax - cmin)) for bbox in bboxes]
+        else:
+            fill_opacities = 0.2
 
         img = draw_bboxes(
             img=page,
-            bboxes=bboxes,
+            bboxes=[bbox["bbox"] for bbox in bboxes],
             strokewidths=0,  # Could also be a list for each bbox
             colors="blue",
             fill_colors="blue",
-            fill_opacities=0.2,
+            fill_opacities=fill_opacities,
             texts=texts,
             fontsize=10,
         )

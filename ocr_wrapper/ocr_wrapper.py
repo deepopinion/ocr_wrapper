@@ -49,16 +49,17 @@ class OcrWrapper(ABC):
     def ocr(
         self, img: Image.Image, return_extra: bool = False
     ) -> Union[list[dict[str, Union[BBox, str]]], tuple[list[dict[str, Union[BBox, str]]], dict[str, Any]]]:
-        """Returns OCR result as a list of normalized BBox
+        """Returns OCR result as a list of dicts, one per bounding box detected.
 
         Args:
             img: Image to be processed
             return_extra: If True, additionally returns a dict containing extra information given by the OCR engine.
         Returns:
-            A list of dicts, one per bounding box detected. Each dict contains the keys "bbox" and "text", specifying the
-            location of the bounding box and the text contained respectively.
+            A list of dicts, one per bounding box detected. Each dict contains at least the keys "bbox" and "text", specifying the
+            location of the bounding box and the text contained respectively. Specific OCR engines may add other keys to
+            these dicts to return additional information about a bounding box.
             If ``return_extra`` is True, returns a tuple with the usual return list, and a dict containing extra
-            information given by the OCR engine.
+            information about the whole document (e.g. rotaion angle) given by the OCR engine.
         """
         # Keep copy of original image
         original_img = img.copy()

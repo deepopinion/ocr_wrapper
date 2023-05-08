@@ -31,7 +31,7 @@ if uploaded_file is not None:
     else:
         pages = [Image.open(filelike)]
 
-    ocr = GoogleOCR(max_size=2048)
+    ocr = GoogleOCR(ocr_samples=2, cache_file="googlecache.gcache")
 
     for page in pages:
         bboxes = ocr.ocr(page)

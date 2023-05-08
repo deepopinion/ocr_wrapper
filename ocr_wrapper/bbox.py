@@ -188,7 +188,7 @@ class BBox:
             raise ValueError(f"Original size must be a sequence of length 2, but was {original_size}")
 
         normalized_coords = [c / s for c, s in zip(coords, original_size * 4)]
-        if not all(-0.001 <= c <= 1.001 for c in normalized_coords):
+        if not all(-0.02 <= c <= 1.02 for c in normalized_coords):
             raise ValueError(
                 f"Pixel coords must not be larger than the original image size, but coords {coords} for original size {original_size}."
             )

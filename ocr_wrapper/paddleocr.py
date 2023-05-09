@@ -28,8 +28,20 @@ def requires_paddle(fn):
 
 class PaddleOCR(OcrWrapper):
     @requires_paddle
-    def __init__(self, *, cache_file: Optional[str] = None, max_size: Optional[int] = 1024, verbose: bool = False):
-        super().__init__(cache_file=cache_file, max_size=max_size, verbose=verbose)
+    def __init__(
+        self,
+        *,
+        cache_file: Optional[str] = None,
+        max_size: Optional[int] = 1024,
+        ocr_samples: int = 1,
+        verbose: bool = False,
+    ):
+        super().__init__(
+            cache_file=cache_file,
+            max_size=max_size,
+            ocr_samples=ocr_samples,
+            verbose=verbose,
+        )
         self.client = paddleocr.PaddleOCR(
             use_angle_cls=True,
             show_log=False,

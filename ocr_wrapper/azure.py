@@ -27,7 +27,9 @@ def requires_azure(fn):
     @functools.wraps(fn)
     def wrapper_decocator(*args, **kwargs):
         if not _has_azure:
-            raise ImportError('Azure Read requires missing "azure-cognitiveservices-vision-computervision" package.')
+            raise ImportError(
+                'Azure Read requires missing "azure-cognitiveservices-vision-computervision" package.'
+            )
         return fn(*args, **kwargs)
 
     return wrapper_decocator
@@ -35,8 +37,20 @@ def requires_azure(fn):
 
 class AzureOCR(OcrWrapper):
     @requires_azure
-    def __init__(self, *, cache_file: Optional[str] = None, max_size: Optional[int] = 1024, verbose: bool = False):
-        super().__init__(cache_file=cache_file, max_size=max_size, verbose=verbose)
+    def __init__(
+        self,
+        *,
+        cache_file: Optional[str] = None,
+        max_size: Optional[int] = 1024,
+        ocr_samples: int = 1,
+        verbose: bool = False,
+    ):
+        super().__init__(
+            cache_file=cache_file,
+            max_size=max_size,
+            ocr_samples=ocr_samples,
+            verbose=verbose,
+        )
         keyfile = "~/.config/azure/ocr_credentials.json"
         with open(os.path.expanduser(keyfile), mode="r") as f:
             ocr_credentials = json.load(f)

@@ -36,6 +36,7 @@ class EasyOCR(OcrWrapper):
         languages: Union[str, list[str]],
         width_thr: float = 0.5,
         max_size: Optional[int] = 1024,
+        ocr_samples: int = 1,
         verbose: bool = False,
         **kwargs,
     ):
@@ -44,7 +45,12 @@ class EasyOCR(OcrWrapper):
             languages: A string or a list of languages to use for OCR from the list here: https://www.jaided.ai/easyocr/
             width_thr: Distance where bounding boxes are still getting merged into one
         """
-        super().__init__(cache_file=cache_file, max_size=max_size, verbose=verbose)
+        super().__init__(
+            cache_file=cache_file,
+            max_size=max_size,
+            ocr_samples=ocr_samples,
+            verbose=verbose,
+        )
         self.languages = [languages] if isinstance(languages, str) else list(languages)
         self.width_thr = width_thr
 

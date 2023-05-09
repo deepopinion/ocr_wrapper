@@ -27,8 +27,20 @@ def requires_boto(fn):
 
 class AwsOCR(OcrWrapper):
     @requires_boto
-    def __init__(self, *, cache_file: Optional[str] = None, max_size: Optional[int] = 1024, verbose: bool = False):
-        super().__init__(cache_file=cache_file, max_size=max_size, verbose=verbose)
+    def __init__(
+        self,
+        *,
+        cache_file: Optional[str] = None,
+        max_size: Optional[int] = 1024,
+        ocr_samples: int = 1,
+        verbose: bool = False,
+    ):
+        super().__init__(
+            cache_file=cache_file,
+            max_size=max_size,
+            ocr_samples=ocr_samples,
+            verbose=verbose,
+        )
         self.client = boto3.client("textract", region_name="eu-central-1")
 
     @requires_boto
@@ -54,7 +66,11 @@ class AwsOCR(OcrWrapper):
         for block in response["Blocks"]:
             if block["BlockType"] != "WORD":
                 continue
-            coords = [item for vert in block["Geometry"]["Polygon"] for item in [vert["X"], vert["Y"]]]
+            coords = [
+                item
+                for vert in block["Geometry"]["Polygon"]
+                for item in [vert["X"], vert["Y"]]
+            ]
             bbox = BBox.from_normalized(coords, original_size=img.size)
             result.append({"bbox": bbox, "text": block["Text"]})
         return result

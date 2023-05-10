@@ -2,14 +2,18 @@ from __future__ import annotations
 
 import shelve
 from abc import ABC, abstractmethod
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from threading import Lock
 from hashlib import sha256
 from io import BytesIO
 from typing import Any, Optional, Union
 
 from PIL import Image, ImageDraw, ImageOps
 
+from .aggregate_multiple_responses import aggregate_ocr_samples, generate_img_sample
 from .bbox import BBox
-from .aggregate_multiple_responses import generate_img_sample, aggregate_ocr_samples
+
+shelve_mutex = Lock()  # Mutex to ensure that only one process is writing to the cache file at a time
 
 
 def rotate_image(image: Image.Image, angle: int) -> Image.Image:
@@ -86,15 +90,29 @@ class OcrWrapper(ABC):
         return result
 
     def _get_multi_response(self, img: Image.Image) -> list[Any]:
-        """Get OCR response from multiple samples of the same image."""
+        """Get OCR response from multiple samples of the same image.
+
+        The processing of the individual samples is done in parallel (using threads).
+        This does not run on multiple cores, but it is mitigating the latency of calling
+        the external OCR engine.
+        """
         responses = []
-        for i in range(self.ocr_samples):
+
+        def process_sample(i):
             img_sample = generate_img_sample(img, i)
             response = self._get_ocr_response(img_sample)
             result = self._convert_ocr_response(img_sample, response)
-            responses.append(result)
+            return result
 
-        response = aggregate_ocr_samples(responses)
+        with ThreadPoolExecutor() as executor:
+            futures = {executor.submit(process_sample, i) for i in range(self.ocr_samples)}
+
+            for future in as_completed(futures):
+                responses.append(future.result())
+
+        width, height = img.size
+
+        response = aggregate_ocr_samples(responses, width, height)
 
         return response
 
@@ -153,7 +171,7 @@ class OcrWrapper(ABC):
     def _get_from_shelf(self, img: Image.Image):
         """Get a OCR response from the cache, if it exists."""
         if self.cache_file is not None:
-            with shelve.open(self.cache_file) as db:
+            with shelve.open(self.cache_file, "r") as db:
                 img_bytes = self._pil_img_to_png(img)
                 img_hash = self._get_bytes_hash(img_bytes)
                 if img_hash in db.keys():  # We have a cached version
@@ -164,7 +182,9 @@ class OcrWrapper(ABC):
 
     def _put_on_shelf(self, img: Image.Image, response):
         if self.cache_file is not None:
-            with shelve.open(self.cache_file) as db:
+            shelve_mutex.acquire()
+            with shelve.open(self.cache_file, "w") as db:
                 img_bytes = self._pil_img_to_png(img)
                 img_hash = self._get_bytes_hash(img_bytes)
                 db[img_hash] = response
+            shelve_mutex.release()

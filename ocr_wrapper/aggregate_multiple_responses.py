@@ -20,6 +20,9 @@ def _find_overlapping_bboxes(bbox: dict, bboxes: list[dict], threshold: float) -
     list: A list of overlapping bounding boxes, including the reference bounding box.
     """
     overlapping_bboxes = [bbox]
+    # We only have to check bboxes from other responses
+    bboxes = [bb for bb in bboxes if bb["response_id"] != bbox["response_id"]]
+
     for other_bbox in bboxes:
         overlap1 = bbox_intersection_area_percent(bbox["bbox"], other_bbox["bbox"])
         overlap2 = bbox_intersection_area_percent(other_bbox["bbox"], bbox["bbox"])

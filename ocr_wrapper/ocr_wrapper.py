@@ -9,7 +9,7 @@ from typing import Any, Optional, Union
 from PIL import Image, ImageDraw, ImageOps
 
 from .bbox import BBox
-from .bbox_utils import bbox_intersection_area_percent
+from .aggregate_multiple_responses import generate_img_sample, aggregate_ocr_samples
 
 
 def rotate_image(image: Image.Image, angle: int) -> Image.Image:
@@ -28,135 +28,6 @@ def rotate_image(image: Image.Image, angle: int) -> Image.Image:
         return image.transpose(Image.Transpose.ROTATE_270)
     else:
         raise Exception(f"Unsupported angle: {angle}")
-
-
-def _find_overlapping_bboxes(bbox: dict, bboxes: list[dict], threshold: float):
-    """
-    Find the bounding boxes that overlap with the given bounding box.
-
-    Args:
-    bbox: The reference bounding box dict.
-    bboxes (list): A list of bounding boxes dicts to check for overlap.
-    threshold (float): The threshold for the percentage of overlap.
-
-    Returns:
-    list: A list of overlapping bounding boxes, including the reference bounding box.
-    """
-    overlapping_bboxes = [bbox]
-    for other_bbox in bboxes:
-        overlap1 = bbox_intersection_area_percent(bbox["bbox"], other_bbox["bbox"])
-        overlap2 = bbox_intersection_area_percent(other_bbox["bbox"], bbox["bbox"])
-        if overlap1 > threshold and overlap2 > threshold:
-            overlapping_bboxes.append(other_bbox)
-            bbox["overlap"] = overlap1
-            other_bbox["overlap"] = overlap2
-    return overlapping_bboxes
-
-
-def _group_overlapping_bboxes(bboxes, threshold: float):
-    """
-    Group the bounding boxes that have an overlap greater than the given threshold.
-
-    Args:
-    bboxes: The dictionaries containing the bounding boxes and other information.
-    threshold (float): The threshold for the percentage of overlap.
-
-    Returns:
-    list: A list of lists containing the groups of overlapping bounding boxes.
-    """
-    groups = []
-    bboxes = bboxes.copy()
-
-    while len(bboxes) > 0:
-        bbox = bboxes.pop(0)
-        overlapping_bboxes = _find_overlapping_bboxes(bbox, bboxes, threshold)
-        groups.append(overlapping_bboxes)
-        for overlapping_bbox in overlapping_bboxes:
-            if overlapping_bbox != bbox:
-                bboxes.remove(overlapping_bbox)
-
-    return groups
-
-
-def _generate_img_sample(img: Image.Image, n: int) -> Image.Image:
-    """Takes an image and a sample number and returns a new image that has been changed in some way.
-    Currently we are only resizing the image.
-
-    If  n=0, the original image is returned.
-    """
-    if n == 0:
-        return img
-    # Make the image smaller by 1/(n/2)
-    new_size = tuple(int(x * (1 - n * 0.2)) for x in img.size)
-    return img.resize(new_size, resample=Image.Resampling.LANCZOS)
-
-
-def _get_overall_confidence(responses: list[Any]) -> float:
-    """Returns the overall confidence of an OCR response as the mean confidence of all bounding boxes.
-    The confidence is calculated as the average of the individual confidences.
-    """
-    try:
-        overall_confidence = sum(response["confidence"] for response in responses) / len(responses)
-    except KeyError:
-        overall_confidence = 0
-
-    return overall_confidence
-
-
-def _get_highest_confidence_response(responses: list[Any]):
-    """Returns the response with the highest confidence and its id"""
-    best_response = responses[0]
-    best_response_id = 0
-    best_confidence = _get_overall_confidence(best_response)
-    print(f"Confidence of response 0 = {best_confidence}")
-    for i, response in enumerate(responses[1:]):
-        confidence = _get_overall_confidence(response)
-        print(f"Confidence of response {i+1} = {confidence}")
-        if confidence > best_confidence:
-            best_response = response
-            best_response_id = i + 1
-            best_confidence = confidence
-    print(f"Best response: {best_response_id} with confidence {best_confidence}")
-
-    return best_response, best_response_id
-
-
-def _aggregate_ocr_samples(responses: list[Any]) -> Any:
-    if len(responses) == 1:
-        return responses[0]
-    else:
-        bboxes = []
-        for i, response in enumerate(responses):
-            for res_dict in response:
-                res_dict["response_id"] = i
-                bboxes.append(res_dict)
-
-        bbox_groups = _group_overlapping_bboxes(bboxes, 0.1)
-
-        # Determine responses with the overall highest confidence
-        best_response, best_response_id = _get_highest_confidence_response(responses)
-
-        # Add all bboxes which are not overlapping with any other bbox and are not already part of the best response
-        for bbox_group in bbox_groups:
-            bbox = bbox_group[0]
-            if len(bbox_group) == 1 and bbox["response_id"] != best_response:
-                # Check if bbox overlaps with any other bbox that is already in the best response
-                highest_overlap = 0
-                for best_bbox in best_response:
-                    if bbox_intersection_area_percent(bbox["bbox"], best_bbox["bbox"]) > highest_overlap:
-                        highest_overlap = bbox_intersection_area_percent(bbox["bbox"], best_bbox["bbox"])
-
-                if highest_overlap < 0.5:
-                    best_response.append(bbox_group[0])
-
-        # Assign the original image size to all bboxes
-        original_width = responses[0][0]["bbox"].original_width
-        original_height = responses[0][0]["bbox"].original_height
-        for bbox_dict in best_response:
-            bbox_dict["bbox"].original_width = original_width
-            bbox_dict["bbox"].original_height = original_height
-
-        return best_response
 
 
 class OcrWrapper(ABC):
@@ -181,7 +52,7 @@ class OcrWrapper(ABC):
 
     def ocr(
         self, img: Image.Image, return_extra: bool = False
-    ) -> Union[list[dict[str, Union[BBox, str]]], tuple[list[dict[str, Union[BBox, str]]], dict[str, Any]]]:
+    ) -> Union[list[dict[str, Union[BBox, str]]], tuple[list[dict[str, Union[BBox, str]]], dict[str, Any]],]:
         """Returns OCR result as a list of dicts, one per bounding box detected.
 
         Args:
@@ -218,12 +89,12 @@ class OcrWrapper(ABC):
         """Get OCR response from multiple samples of the same image."""
         responses = []
         for i in range(self.ocr_samples):
-            img_sample = _generate_img_sample(img, i)
+            img_sample = generate_img_sample(img, i)
             response = self._get_ocr_response(img_sample)
             result = self._convert_ocr_response(img_sample, response)
             responses.append(result)
 
-        response = _aggregate_ocr_samples(responses)
+        response = aggregate_ocr_samples(responses)
 
         return response
 

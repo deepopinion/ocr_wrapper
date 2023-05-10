@@ -306,8 +306,11 @@ def draw_bboxes(
             f"fill_opacities ({len(fill_opacities)}) must be the same"
         )
     img = img.copy()  # Make a copy of the image to not modify the original
+    # Set up image and draw so transparent boxes work
+    img = img.convert("RGB")
     draw = ImageDraw.Draw(img, "RGBA")
-    width, height = img.size
+
+    width, _ = img.size
 
     # Get font
     fontsize = int((fontsize / 1000) * width)

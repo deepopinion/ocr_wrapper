@@ -9,6 +9,8 @@ import streamlit as st
 import tempfile
 from PIL import Image
 
+import time
+
 
 def whiten_image(img: Image.Image, amount: float) -> Image.Image:
     """Makes an image brighter"""
@@ -32,6 +34,9 @@ if uploaded_file is not None:
         pages = [Image.open(filelike)]
 
     ocr = GoogleOCR(ocr_samples=2, cache_file="googlecache.gcache")
+
+    # Start time measurement
+    start = time.time()
 
     for page in pages:
         bboxes = ocr.ocr(page)
@@ -65,3 +70,7 @@ if uploaded_file is not None:
             fontsize=10,
         )
         st.image(img)
+
+    # End time measurement and print time
+    end = time.time()
+    st.write("Time taken: ", end - start)

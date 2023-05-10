@@ -13,8 +13,6 @@ from PIL import Image, ImageDraw, ImageOps
 from .aggregate_multiple_responses import aggregate_ocr_samples, generate_img_sample
 from .bbox import BBox
 
-shelve_mutex = Lock()  # Mutex to ensure that only one process is writing to the cache file at a time
-
 
 def rotate_image(image: Image.Image, angle: int) -> Image.Image:
     """
@@ -53,6 +51,8 @@ class OcrWrapper(ABC):
         self.ocr_samples = ocr_samples
         self.verbose = verbose
         self.extra = {}  # Extra information to be returned by ocr()
+
+        self.shelve_mutex = Lock()  # Mutex to ensure that only one process is writing to the cache file at a time
 
     def ocr(
         self, img: Image.Image, return_extra: bool = False
@@ -182,9 +182,9 @@ class OcrWrapper(ABC):
 
     def _put_on_shelf(self, img: Image.Image, response):
         if self.cache_file is not None:
-            shelve_mutex.acquire()
+            self.shelve_mutex.acquire()
             with shelve.open(self.cache_file, "w") as db:
                 img_bytes = self._pil_img_to_png(img)
                 img_hash = self._get_bytes_hash(img_bytes)
                 db[img_hash] = response
-            shelve_mutex.release()
+            self.shelve_mutex.release()

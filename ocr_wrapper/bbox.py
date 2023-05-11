@@ -2,15 +2,16 @@ from __future__ import annotations
 
 import json
 import os
-from dataclasses import dataclass
 import random
+from dataclasses import dataclass
 from functools import lru_cache
 from typing import Optional, Union
 
+import numpy as np
+import shapely
+import shapely.affinity
 from dataclasses_json import dataclass_json
 from PIL import Image, ImageColor, ImageDraw, ImageFont
-import numpy as np
-from shapely import affinity
 from shapely.geometry import Polygon
 
 
@@ -246,7 +247,7 @@ class BBox:
             angle: The angle in degrees to rotate the bounding box. Positive values are clockwise.
         """
         poly = self.get_shapely_polygon()
-        rotated_poly = affinity.rotate(poly, -angle, origin=(0.5, 0.5))
+        rotated_poly = shapely.affinity.rotate(poly, -angle, origin=(0.5, 0.5))
         coords = np.array(rotated_poly.exterior.coords[:-1])  # Last point is the same as the first
         return BBox.from_normalized(coords.flatten().tolist(), self.original_size)
 

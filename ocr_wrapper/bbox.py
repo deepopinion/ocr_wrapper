@@ -4,6 +4,7 @@ import json
 import os
 from dataclasses import dataclass
 import random
+from functools import lru_cache
 from typing import Optional, Union
 
 from dataclasses_json import dataclass_json
@@ -211,6 +212,7 @@ class BBox:
         coords = (x1, y1, x2, y1, x2, y2, x1, y2)
         return cls.from_pixels(coords, original_size)
 
+    @lru_cache
     def get_shapely_polygon(self) -> Polygon:
         """Returns the bounding box as a normalized shapely polygon"""
         tl = (self.TLx, self.TLy)

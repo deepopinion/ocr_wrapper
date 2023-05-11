@@ -2,34 +2,42 @@
 Functions to generate multiple OCR responses and integrate them into a single response, improving the overall
 quality of the response.
 """
+import rtree
 from PIL import Image
 
 from ocr_wrapper.bbox_utils import bbox_intersection_area_percent
 
 
-def _find_overlapping_bboxes(bbox: dict, bboxes: list[dict], threshold: float) -> list[dict]:
-    """
-    Find the bounding boxes that overlap with the given bounding box.
-
-    Args:
-    bbox: The reference bounding box dict.
-    bboxes (list): A list of bounding boxes dicts to check for overlap.
-    threshold (float): The threshold for the percentage of overlap.
-
-    Returns:
-    list: A list of overlapping bounding boxes, including the reference bounding box.
-    """
-    overlapping_bboxes = [bbox]
-    # We only have to check bboxes from other responses
-    bboxes = [bb for bb in bboxes if bb["response_id"] != bbox["response_id"]]
-
-    for other_bbox in bboxes:
+def check_overlap(args):
+    bbox, other_bboxes, threshold = args
+    results = []
+    for other_bbox in other_bboxes:
         overlap1 = bbox_intersection_area_percent(bbox["bbox"], other_bbox["bbox"])
         overlap2 = bbox_intersection_area_percent(other_bbox["bbox"], bbox["bbox"])
         if overlap1 > threshold and overlap2 > threshold:
-            overlapping_bboxes.append(other_bbox)
-            bbox["overlap"] = overlap1
-            other_bbox["overlap"] = overlap2
+            results.append(other_bbox)
+    return results
+
+
+def _get_poly_intersection_area(p1, p2):
+    inter_poly = p1.intersection(p2)
+    return inter_poly.area / p1.area
+
+
+def _find_overlapping_bboxes(bbox: dict, idx, orig_polygons, poly2bbox, threshold: float) -> list[dict]:
+    overlapping_bboxes = [bbox]
+
+    polygon = bbox["bbox"].get_shapely_polygon()
+    potential_matches = [orig_polygons[pos] for pos in idx.intersection(polygon.bounds)]
+    for match in potential_matches:
+        if polygon == match:
+            continue
+
+        overlap1 = _get_poly_intersection_area(polygon, match)
+        overlap2 = _get_poly_intersection_area(match, polygon)
+        if overlap1 > threshold and overlap2 > threshold:
+            overlapping_bboxes.append(poly2bbox[match])
+
     return overlapping_bboxes
 
 
@@ -44,6 +52,39 @@ def _group_overlapping_bboxes(bboxes: list[dict], threshold: float) -> list[list
     Returns:
     list: A list of lists containing the groups of overlapping bounding boxes.
     """
+    # Create a list of polygons and a dictionary mapping back polygons to bounding boxes
+    polygons = []
+    poly2bbox = {}
+
+    for bbox in bboxes:
+        poly = bbox["bbox"].get_shapely_polygon()
+        polygons.append(poly)
+        poly2bbox[poly] = bbox
+
+    # Create an rtree index for the polygons so we can quickly find intersecting polygons
+    idx = rtree.index.Index()
+    poly2treeid = {}
+    for i, polygon in enumerate(polygons):
+        idx.insert(i, polygon.bounds)
+        poly2treeid[polygon] = i
+
+    orig_polygons = polygons.copy()
+
+    groups = []
+    while len(polygons) > 0:
+        polygon = polygons.pop(0)
+        bbox = poly2bbox[polygon]
+        overlapping_bboxes = _find_overlapping_bboxes(bbox, idx, orig_polygons, poly2bbox, threshold)
+        groups.append(overlapping_bboxes)
+        for overlapping_bbox in overlapping_bboxes:
+            if overlapping_bbox != bbox:
+                polygon = overlapping_bbox["bbox"].get_shapely_polygon()
+                polygons.remove(polygon)
+                idx.delete(poly2treeid[polygon], polygon.bounds)
+
+    return groups
+    # Create the grouped bounding boxes, depending on the overlap threshold
+
     groups = []
     bboxes = bboxes.copy()
 

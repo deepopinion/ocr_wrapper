@@ -81,9 +81,11 @@ class OcrWrapper(ABC):
             angle = self.extra["document_rotation"]
             # Rotate image
             self.extra["rotated_image"] = rotate_image(original_img, angle)
+            new_width, new_height = self.extra["rotated_image"].size
             # Rotate boxes. The given rotation will be done counter-clockwise
             for r in result:
                 r["bbox"] = r["bbox"].rotate(angle)
+                r["bbox"].original_width, r["bbox"].original_height = new_width, new_height
 
         if return_extra:
             return result, self.extra

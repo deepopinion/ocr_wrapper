@@ -243,6 +243,7 @@ class BBox:
 
     def rotate(self, angle) -> "BBox":
         """Returns a new BBox that is rotated around the center of the image.
+        Warning: If you do this together with rotating the image, you have to manually calculate the new original size
         Args:
             angle: The angle in degrees to rotate the bounding box. Positive values are clockwise.
         """

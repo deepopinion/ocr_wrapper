@@ -8,17 +8,6 @@ from PIL import Image
 from ocr_wrapper.bbox_utils import bbox_intersection_area_percent
 
 
-def check_overlap(args):
-    bbox, other_bboxes, threshold = args
-    results = []
-    for other_bbox in other_bboxes:
-        overlap1 = bbox_intersection_area_percent(bbox["bbox"], other_bbox["bbox"])
-        overlap2 = bbox_intersection_area_percent(other_bbox["bbox"], bbox["bbox"])
-        if overlap1 > threshold and overlap2 > threshold:
-            results.append(other_bbox)
-    return results
-
-
 def _get_poly_intersection_area(p1, p2):
     """
     Calculate the ratio of intersection area between polygon p1 and polygon p2 as a proportion of the area of polygon p1.

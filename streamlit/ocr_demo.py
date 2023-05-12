@@ -6,6 +6,7 @@ from pdf2image import convert_from_bytes
 from io import BytesIO
 
 import streamlit as st
+
 import tempfile
 from PIL import Image
 
@@ -20,9 +21,11 @@ def whiten_image(img: Image.Image, amount: float) -> Image.Image:
 # Allow uploading of PDFs
 uploaded_file = st.file_uploader("Choose a file")
 # Allow selection of whether to output ocr box order
+auto_rotate = st.checkbox("Auto rotate image")
 output_order = st.checkbox("Output OCR box order")
 output_text = st.checkbox("Output OCR text")
 show_confidence = st.checkbox("Show confidence (low confidence is a darker blue)")
+ocr_samples: int = st.number_input("Number of OCR samples", min_value=1, max_value=10, value=2)
 
 if uploaded_file is not None:
     bytes_data = uploaded_file.getvalue()
@@ -33,16 +36,16 @@ if uploaded_file is not None:
     else:
         pages = [Image.open(filelike)]
 
-    ocr = GoogleOCR(ocr_samples=2, cache_file="googlecache.gcache")
+    ocr = GoogleOCR(ocr_samples=ocr_samples, cache_file="googlecache.gcache", auto_rotate=auto_rotate)
 
     # Start time measurement
     start = time.time()
 
     for page in pages:
-        bboxes = ocr.ocr(page)
-        # st.image(page)
+        bboxes, extras = ocr.ocr(page, return_extra=True)
 
-        # page = whiten_image(page, 0.3)
+        if auto_rotate:
+            page = extras["rotated_image"]
 
         if output_order:
             texts = [str(i) for i in list(range(len(bboxes)))]

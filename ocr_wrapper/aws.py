@@ -66,11 +66,7 @@ class AwsOCR(OcrWrapper):
         for block in response["Blocks"]:
             if block["BlockType"] != "WORD":
                 continue
-            coords = [
-                item
-                for vert in block["Geometry"]["Polygon"]
-                for item in [vert["X"], vert["Y"]]
-            ]
+            coords = [item for vert in block["Geometry"]["Polygon"] for item in [vert["X"], vert["Y"]]]
             bbox = BBox.from_normalized(coords, original_size=img.size)
             result.append({"bbox": bbox, "text": block["Text"]})
         return result

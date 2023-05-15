@@ -27,9 +27,7 @@ def requires_azure(fn):
     @functools.wraps(fn)
     def wrapper_decocator(*args, **kwargs):
         if not _has_azure:
-            raise ImportError(
-                'Azure Read requires missing "azure-cognitiveservices-vision-computervision" package.'
-            )
+            raise ImportError('Azure Read requires missing "azure-cognitiveservices-vision-computervision" package.')
         return fn(*args, **kwargs)
 
     return wrapper_decocator

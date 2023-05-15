@@ -111,14 +111,14 @@ def _get_overall_confidence(responses: list[dict]) -> float:
         return 0.0
     try:
         overall_confidence = sum(response["confidence"] for response in responses) / len(responses)
-    except KeyError:
-        overall_confidence = 0
+    except KeyError:  # If no confidence is available, return 0
+        overall_confidence = 0.0
 
     return overall_confidence
 
 
 def _get_highest_confidence_response(responses: list[list[dict]]) -> list[dict]:
-    """Returns the response with the highest confidence and its id"""
+    """Returns the response with the highest overall confidence"""
     best_response = max(responses, key=lambda x: _get_overall_confidence(x))
 
     return best_response
@@ -130,7 +130,7 @@ def _add_single_bboxes(
     overlap_threshold: float = 0.5,
 ) -> list[dict]:
     """
-    Adds single bounding boxes from bbox_group to the best_response if their overlap with any
+    Adds single bounding boxes from bbox_groups to the best_response if their overlap with any
     bounding box in best_response is less than the overlap_threshold.
 
     This can be used to enrich one response with bounding boxes that have been missed
@@ -145,10 +145,9 @@ def _add_single_bboxes(
         list[dict]: The updated best_response list with single bounding boxes added.
     """
     for bbox_group in bbox_groups:
-        if len(bbox_group) == 1:  # Check if we have a single bbox
+        if len(bbox_group) == 1:  # Only consider single bounding boxes
             bbox_candidate = bbox_group[0]
             # Check if the bbox candidate overlaps with any other bbox that is already in the best response
-            # This will also be the case if the bbox candidate is already in the best response
             overlaps = [
                 bbox_intersection_area_percent(bbox_candidate["bbox"], best_bbox["bbox"])
                 for best_bbox in best_response
@@ -165,7 +164,7 @@ def aggregate_ocr_samples(responses: list[list[dict]], original_width: int, orig
     """Given multiple responses of the same document page, aggregates them into a more reliable response."""
     if len(responses) == 1:  # If there is only one response, return it unchanged
         return responses[0]
-    else:
+    elif len(responses) == 2:
         # Extract all bounding boxes from the responses and add the response id they came from
         # The bounding boxes are actually dictionaries containing the bbox and additional other info like the text
         #    and possibly the uncertainty etc.
@@ -191,5 +190,7 @@ def aggregate_ocr_samples(responses: list[list[dict]], original_width: int, orig
         for bbox_dict in best_response:
             bbox_dict["bbox"].original_width = original_width
             bbox_dict["bbox"].original_height = original_height
+    else:
+        raise NotImplementedError("Aggregating more than 2 responses is not yet implemented")
 
-        return best_response
+    return best_response

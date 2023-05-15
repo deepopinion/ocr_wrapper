@@ -27,12 +27,12 @@ def _find_overlapping_bboxes(bbox: dict, bboxes: list[dict], idx: rtree.index.In
     polygon = bbox["bbox"].get_shapely_polygon()
     potential_matches = [bboxes[pos] for pos in idx.intersection(polygon.bounds)]
     for match in potential_matches:
-        match_polygon = match["bbox"].get_shapely_polygon()
         if bbox == match:  # don't compare a bbox with itself
             continue
         if bbox["response_id"] == match["response_id"]:  # don't compare bboxes from the same OCR response
             continue
 
+        match_polygon = match["bbox"].get_shapely_polygon()
         overlap1 = _get_poly_intersection_area(polygon, match_polygon)
         overlap2 = _get_poly_intersection_area(match_polygon, polygon)
         if overlap1 > threshold and overlap2 > threshold:

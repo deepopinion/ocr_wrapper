@@ -42,7 +42,7 @@ class OcrWrapper(ABC):
         cache_file: Optional[str] = None,
         max_size: Optional[int] = 1024,
         auto_rotate: bool = False,
-        ocr_samples: int = 1,
+        ocr_samples: int = 2,
         verbose: bool = False,
     ):
         self.cache_file = cache_file

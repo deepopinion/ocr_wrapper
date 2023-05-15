@@ -46,15 +46,15 @@ def _group_overlapping_bboxes(bboxes: list[dict], threshold: float) -> list[list
     Group the bounding boxes that have an overlap greater than the given threshold.
 
     Args:
-    bboxes: The dictionaries containing the bounding boxes and other information.
-    threshold (float): The threshold for the percentage of overlap.
+        bboxes: The dictionaries containing the bounding boxes and other information.
+        threshold (float): The threshold for the percentage of overlap.
 
     Returns:
-    list: A list of lists containing the groups of overlapping bounding boxes.
+        list: A list of lists containing the groups of overlapping bounding boxes.
     """
     # Create an rtree index for the polygons so we can quickly find intersecting polygons
     idx = rtree.index.Index()
-    bbox2treeid = {}
+    bbox2treeid = {}  # Needed so we can delete bboxes from the index
     for i, bbox_dict in enumerate(bboxes):
         bbox = bbox_dict["bbox"]
         idx.insert(i, bbox.get_shapely_polygon().bounds)
@@ -64,9 +64,11 @@ def _group_overlapping_bboxes(bboxes: list[dict], threshold: float) -> list[list
 
     groups = []
     while len(working_bboxes) > 0:
+        # Find overlapping bboxes for the first bbox in the list
         bbox = working_bboxes.pop(0)
         overlapping_bboxes = _find_overlapping_bboxes(bbox, bboxes, idx, threshold)
         groups.append(overlapping_bboxes)
+        # Remove the overlapping bboxes from the list of bboxes to be processed and the rtree index
         for overlapping_bbox in overlapping_bboxes:
             if overlapping_bbox != bbox:
                 working_bboxes.remove(overlapping_bbox)

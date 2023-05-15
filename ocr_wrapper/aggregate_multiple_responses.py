@@ -6,6 +6,7 @@ import rtree
 from PIL import Image
 
 from ocr_wrapper.bbox_utils import bbox_intersection_area_percent
+import ocr_wrapper.image_pre_processing as ipp
 
 
 def _get_poly_intersection_area(p1, p2):
@@ -89,7 +90,7 @@ def _group_overlapping_bboxes(bboxes: list[dict], threshold: float) -> list[list
     return groups
 
 
-def generate_img_sample(img: Image.Image, n: int, *, k: float = 0.2) -> Image.Image:
+def generate_img_sample(img: Image.Image, n: int, *, k: float = 0.2, denoise: bool = True) -> Image.Image:
     """Takes an image and a sample number and returns a new image that has been changed in some way.
     Currently we are only resizing the image.
 
@@ -99,13 +100,17 @@ def generate_img_sample(img: Image.Image, n: int, *, k: float = 0.2) -> Image.Im
         img: The image to be changed
         n: The sample number
         k: The factor by which the image is resized (bigger means for each increase of n, the image is resized more)
+        denoise: Whether to denoise the image after resizing, the sample with k=0 will never be denoised (default: True)
     """
     if n == 0:
         return img
 
     factor = 1 / (1 + n * k)
     new_size = tuple(int(x * factor) for x in img.size)
-    return img.resize(new_size, resample=Image.Resampling.LANCZOS)
+    new_img = img.resize(new_size, resample=Image.Resampling.LANCZOS)
+    if denoise:
+        new_img = ipp.denoise_image_for_ocr(new_img)
+    return new_img
 
 
 def _get_overall_confidence(responses: list[dict]) -> float:

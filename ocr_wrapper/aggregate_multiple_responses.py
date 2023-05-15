@@ -74,20 +74,6 @@ def _group_overlapping_bboxes(bboxes: list[dict], threshold: float) -> list[list
                 idx.delete(bbox2treeid[ov_bbox], ov_bbox.get_shapely_polygon().bounds)
 
     return groups
-    # Create the grouped bounding boxes, depending on the overlap threshold
-
-    groups = []
-    bboxes = bboxes.copy()
-
-    while len(bboxes) > 0:
-        bbox = bboxes.pop(0)
-        overlapping_bboxes = _find_overlapping_bboxes(bbox, bboxes, threshold)
-        groups.append(overlapping_bboxes)
-        for overlapping_bbox in overlapping_bboxes:
-            if overlapping_bbox != bbox:
-                bboxes.remove(overlapping_bbox)
-
-    return groups
 
 
 def generate_img_sample(img: Image.Image, n: int, *, k: float = 0.2, denoise: bool = True) -> Image.Image:

@@ -52,11 +52,11 @@ class OcrWrapper(ABC):
         self.verbose = verbose
         self.extra = {}  # Extra information to be returned by ocr()
 
-        self.shelve_mutex = Lock()  # Mutex to ensure that only one process is writing to the cache file at a time
+        self.shelve_mutex = Lock()  # Mutex to ensure that only one thread is writing to the cache file at a time
 
     def ocr(
         self, img: Image.Image, return_extra: bool = False
-    ) -> Union[list[dict[str, Union[BBox, str]]], tuple[list[dict[str, Union[BBox, str]]], dict[str, Any]],]:
+    ) -> Union[list[dict[str, Union[BBox, str]]], tuple[list[dict[str, Union[BBox, str]]], dict[str, Any]]]:
         """Returns OCR result as a list of dicts, one per bounding box detected.
 
         Args:
@@ -85,6 +85,7 @@ class OcrWrapper(ABC):
             # Rotate boxes. The given rotation will be done counter-clockwise
             for r in result:
                 r["bbox"] = r["bbox"].rotate(angle)
+                # We have to set the new original width and height of the bounding box, since rotation might have changed it
                 r["bbox"].original_width, r["bbox"].original_height = new_width, new_height
 
         if return_extra:
@@ -96,10 +97,12 @@ class OcrWrapper(ABC):
 
         The processing of the individual samples is done in parallel (using threads).
         This does not run on multiple cores, but it is mitigating the latency of calling
-        the external OCR engine.
+        the external OCR engine multiple times.
         """
         responses = []
+        width, height = img.size
 
+        # Get individual OCR responses in parallel
         def process_sample(i):
             img_sample = generate_img_sample(img, i)
             response = self._get_ocr_response(img_sample)
@@ -111,8 +114,6 @@ class OcrWrapper(ABC):
 
             for future in as_completed(futures):
                 responses.append(future.result())
-
-        width, height = img.size
 
         response = aggregate_ocr_samples(responses, width, height)
 

@@ -119,6 +119,8 @@ def _get_overall_confidence(responses: list[dict]) -> float:
 
     If no confidence is available, 0 is returned
     """
+    if len(responses) == 0:
+        return 0.0
     try:
         overall_confidence = sum(response["confidence"] for response in responses) / len(responses)
     except KeyError:

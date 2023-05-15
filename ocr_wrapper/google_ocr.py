@@ -104,6 +104,25 @@ def get_word_and_language_codes(response):
     return word_and_language_codes
 
 
+def _get_words_bboxes_confidences(response):
+    """Given an ocr response, returns a list of tuples of word bounding boxes and confidences"""
+    words, bboxes, confidences = [], [], []
+
+    for page in response.full_text_annotation.pages:
+        for block in page.blocks:
+            for paragraph in block.paragraphs:
+                for word in paragraph.words:
+                    word_text = "".join([symbol.text for symbol in word.symbols])
+                    word_confidence = word.confidence
+                    word_bounding_box = word.bounding_box.vertices
+
+                    words.append(word_text)
+                    bboxes.append(word_bounding_box)
+                    confidences.append(word_confidence)
+
+    return words, bboxes, confidences
+
+
 class GoogleOCR(OcrWrapper):
     """
     A class that provides OCR functionality using Google Cloud Vision API.
@@ -183,11 +202,17 @@ class GoogleOCR(OcrWrapper):
         """Converts the response given by Google OCR to a list of BBox"""
         # Iterate over all responses except the first. The first is for the whole document -> ignore
         bboxes = []
-        for annotation in response.text_annotations[1:]:
-            text = annotation.description
-            coords = [item for vert in annotation.bounding_poly.vertices for item in [vert.x, vert.y]]
+        confidences = []
+
+        words, verts, confs = _get_words_bboxes_confidences(response)
+
+        for text, bbox, confidence in zip(words, verts, confs):
+            coords = [item for vert in bbox for item in [vert.x, vert.y]]
             bbox = BBox.from_float_list(coords, text=text, in_pixels=True)
             bboxes.append(bbox)
+            confidences.append(confidence)
+
+        self.extra.setdefault("confidences", []).append(confidences)
 
         # Determine the rotation of the document
         if len(bboxes) > 0:

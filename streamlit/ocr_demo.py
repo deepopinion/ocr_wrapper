@@ -58,7 +58,8 @@ if uploaded_file is not None:
         if show_confidence:
             # Normalize confidence to be between 0 and 1
             cmin, cmax = min(bbox["confidence"] for bbox in bboxes), max(bbox["confidence"] for bbox in bboxes)
-            fill_opacities = [1 - ((bbox["confidence"] - cmin) / (cmax - cmin)) for bbox in bboxes]
+            # fill_opacities = [1 - ((bbox["confidence"] - cmin) / (cmax - cmin)) for bbox in bboxes]
+            fill_opacities = [1 - bbox["confidence"] for bbox in bboxes]
         else:
             fill_opacities = 0.2
 

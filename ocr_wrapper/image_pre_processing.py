@@ -45,7 +45,7 @@ def _pillow_to_opencv_and_back(func):
 
 
 @_pillow_to_opencv_and_back
-def denoise_image_for_ocr(image) -> Image.Image:
+def denoise_image_for_ocr(image):
     # Denoise the image
     denoised = cv2.fastNlMeansDenoisingColored(image, None, 10, 10, 7, 21)
 

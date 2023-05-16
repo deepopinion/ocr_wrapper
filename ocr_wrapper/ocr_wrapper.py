@@ -186,7 +186,7 @@ class OcrWrapper(ABC):
     def _put_on_shelf(self, img: Image.Image, response):
         if self.cache_file is not None:
             with self.shelve_mutex:
-                with shelve.open(self.cache_file, "w") as db:
+                with shelve.open(self.cache_file, "c") as db:
                     img_bytes = self._pil_img_to_png(img)
                     img_hash = self._get_bytes_hash(img_bytes)
                     db[img_hash] = response

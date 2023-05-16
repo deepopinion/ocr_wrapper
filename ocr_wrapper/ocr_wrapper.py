@@ -174,13 +174,14 @@ class OcrWrapper(ABC):
     def _get_from_shelf(self, img: Image.Image):
         """Get a OCR response from the cache, if it exists."""
         if self.cache_file is not None and os.path.exists(self.cache_file):
-            with shelve.open(self.cache_file, "r") as db:
-                img_bytes = self._pil_img_to_png(img)
-                img_hash = self._get_bytes_hash(img_bytes)
-                if img_hash in db.keys():  # We have a cached version
-                    if self.verbose:
-                        print(f"Using cached results for hash {img_hash}")
-                    return db[img_hash]
+            with self.shelve_mutex:
+                with shelve.open(self.cache_file, "r") as db:
+                    img_bytes = self._pil_img_to_png(img)
+                    img_hash = self._get_bytes_hash(img_bytes)
+                    if img_hash in db.keys():  # We have a cached version
+                        if self.verbose:
+                            print(f"Using cached results for hash {img_hash}")
+                        return db[img_hash]
         return None
 
     def _put_on_shelf(self, img: Image.Image, response):

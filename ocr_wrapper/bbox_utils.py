@@ -7,7 +7,7 @@ from functools import lru_cache
 from .bbox import BBox
 
 
-@lru_cache
+@lru_cache(maxsize=16000)
 def bbox_intersection_area_ratio(bb1: BBox, bb2: BBox) -> float:
     """Returns the area of the intersection of BBox `bb1` with BBox `bb2` as a ratio of the area of `bb1`.
 

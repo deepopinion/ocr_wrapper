@@ -1,6 +1,7 @@
 """
 Additional functions for working with BBox objects.
 """
+from __future__ import annotations
 from functools import lru_cache
 
 from .bbox import BBox

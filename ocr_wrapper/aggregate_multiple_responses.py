@@ -5,16 +5,8 @@ quality of the response.
 import rtree
 from PIL import Image
 
-from ocr_wrapper.bbox_utils import bbox_intersection_area_percent
+from ocr_wrapper.bbox_utils import bbox_intersection_area_ratio
 import ocr_wrapper.image_pre_processing as ipp
-
-
-def _get_poly_intersection_area(p1, p2):
-    """
-    Calculate the ratio of intersection area between polygon p1 and polygon p2 as a proportion of the area of polygon p1.
-    """
-    inter_poly = p1.intersection(p2)
-    return inter_poly.area / p1.area
 
 
 def _find_overlapping_bboxes(bbox: dict, bboxes: list[dict], idx: rtree.index.Index, threshold: float) -> list[dict]:
@@ -32,9 +24,8 @@ def _find_overlapping_bboxes(bbox: dict, bboxes: list[dict], idx: rtree.index.In
         if bbox["response_id"] == match["response_id"]:  # don't compare bboxes from the same OCR response
             continue
 
-        match_polygon = match["bbox"].get_shapely_polygon()
-        overlap1 = _get_poly_intersection_area(polygon, match_polygon)
-        overlap2 = _get_poly_intersection_area(match_polygon, polygon)
+        overlap1 = bbox_intersection_area_ratio(bbox["bbox"], match["bbox"])
+        overlap2 = bbox_intersection_area_ratio(match["bbox"], bbox["bbox"])
         if overlap1 > threshold and overlap2 > threshold:
             overlapping_bboxes.append(match)
 
@@ -149,8 +140,7 @@ def _add_single_bboxes(
             bbox_candidate = bbox_group[0]
             # Check if the bbox candidate overlaps with any other bbox that is already in the best response
             overlaps = [
-                bbox_intersection_area_percent(bbox_candidate["bbox"], best_bbox["bbox"])
-                for best_bbox in best_response
+                bbox_intersection_area_ratio(bbox_candidate["bbox"], best_bbox["bbox"]) for best_bbox in best_response
             ]
             highest_overlap = max(overlaps, default=0)
 

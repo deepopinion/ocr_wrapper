@@ -7,8 +7,8 @@ from .bbox import BBox
 
 
 @lru_cache
-def bbox_intersection_area_percent(bb1: BBox, bb2: BBox) -> float:
-    """Returns the area of the intersection of BBox `bb1` with BBox `bb2` as a proportion of the area of `bb1`.
+def bbox_intersection_area_ratio(bb1: BBox, bb2: BBox) -> float:
+    """Returns the area of the intersection of BBox `bb1` with BBox `bb2` as a ratio of the area of `bb1`.
 
     i.e. max is 1.0, min is 0.0
     """

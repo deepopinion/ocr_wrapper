@@ -2,14 +2,16 @@ from __future__ import annotations
 
 import json
 import os
-from dataclasses import dataclass
 import random
+from dataclasses import dataclass
+from functools import lru_cache
 from typing import Optional, Union
 
+import numpy as np
+import shapely
+import shapely.affinity
 from dataclasses_json import dataclass_json
 from PIL import Image, ImageColor, ImageDraw, ImageFont
-import numpy as np
-from shapely import affinity
 from shapely.geometry import Polygon
 
 
@@ -103,6 +105,9 @@ class BBox:
     BLy: float
     original_width: int  # Width of the image the bounding box is on, in pixels
     original_height: int  # Height of the image the bounding box is on, in pixels
+
+    def __hash__(self):
+        return hash((self.coords, self.original_size))
 
     @property
     def coords(self):
@@ -208,6 +213,7 @@ class BBox:
         coords = (x1, y1, x2, y1, x2, y2, x1, y2)
         return cls.from_pixels(coords, original_size)
 
+    @lru_cache(maxsize=16000)
     def get_shapely_polygon(self) -> Polygon:
         """Returns the bounding box as a normalized shapely polygon"""
         tl = (self.TLx, self.TLy)
@@ -237,11 +243,12 @@ class BBox:
 
     def rotate(self, angle) -> "BBox":
         """Returns a new BBox that is rotated around the center of the image.
+        Warning: If you do this together with rotating the image, you have to manually calculate the new original size
         Args:
             angle: The angle in degrees to rotate the bounding box. Positive values are clockwise.
         """
         poly = self.get_shapely_polygon()
-        rotated_poly = affinity.rotate(poly, -angle, origin=(0.5, 0.5))
+        rotated_poly = shapely.affinity.rotate(poly, -angle, origin=(0.5, 0.5))
         coords = np.array(rotated_poly.exterior.coords[:-1])  # Last point is the same as the first
         return BBox.from_normalized(coords.flatten().tolist(), self.original_size)
 
@@ -306,8 +313,11 @@ def draw_bboxes(
             f"fill_opacities ({len(fill_opacities)}) must be the same"
         )
     img = img.copy()  # Make a copy of the image to not modify the original
+    # Set up image and draw so transparent boxes work
+    img = img.convert("RGB")
     draw = ImageDraw.Draw(img, "RGBA")
-    width, height = img.size
+
+    width, _ = img.size
 
     # Get font
     fontsize = int((fontsize / 1000) * width)

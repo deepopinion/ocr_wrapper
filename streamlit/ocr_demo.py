@@ -6,8 +6,11 @@ from pdf2image import convert_from_bytes
 from io import BytesIO
 
 import streamlit as st
+
 import tempfile
 from PIL import Image
+
+import time
 
 
 def whiten_image(img: Image.Image, amount: float) -> Image.Image:
@@ -18,9 +21,11 @@ def whiten_image(img: Image.Image, amount: float) -> Image.Image:
 # Allow uploading of PDFs
 uploaded_file = st.file_uploader("Choose a file")
 # Allow selection of whether to output ocr box order
+auto_rotate = st.checkbox("Auto rotate image")
 output_order = st.checkbox("Output OCR box order")
 output_text = st.checkbox("Output OCR text")
 show_confidence = st.checkbox("Show confidence (low confidence is a darker blue)")
+ocr_samples: int = st.number_input("Number of OCR samples", min_value=1, max_value=10, value=2)
 
 if uploaded_file is not None:
     bytes_data = uploaded_file.getvalue()
@@ -31,13 +36,16 @@ if uploaded_file is not None:
     else:
         pages = [Image.open(filelike)]
 
-    ocr = GoogleOCR(max_size=2048)
+    ocr = GoogleOCR(ocr_samples=ocr_samples, cache_file="googlecache.gcache", auto_rotate=auto_rotate)
+
+    # Start time measurement
+    start = time.time()
 
     for page in pages:
-        bboxes = ocr.ocr(page)
-        # st.image(page)
+        bboxes, extras = ocr.ocr(page, return_extra=True)
 
-        # page = whiten_image(page, 0.3)
+        if auto_rotate:
+            page = extras["rotated_image"]
 
         if output_order:
             texts = [str(i) for i in list(range(len(bboxes)))]
@@ -50,7 +58,8 @@ if uploaded_file is not None:
         if show_confidence:
             # Normalize confidence to be between 0 and 1
             cmin, cmax = min(bbox["confidence"] for bbox in bboxes), max(bbox["confidence"] for bbox in bboxes)
-            fill_opacities = [1 - ((bbox["confidence"] - cmin) / (cmax - cmin)) for bbox in bboxes]
+            # fill_opacities = [1 - ((bbox["confidence"] - cmin) / (cmax - cmin)) for bbox in bboxes]
+            fill_opacities = [1 - bbox["confidence"] for bbox in bboxes]
         else:
             fill_opacities = 0.2
 
@@ -65,3 +74,7 @@ if uploaded_file is not None:
             fontsize=10,
         )
         st.image(img)
+
+    # End time measurement and print time
+    end = time.time()
+    st.write("Time taken: ", end - start)

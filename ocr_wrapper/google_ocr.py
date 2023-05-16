@@ -143,6 +143,8 @@ class GoogleOCR(OcrWrapper):
             compensate for text orientation. Defaults to False. If True, the
             bounding boxes will be rotated to match a correctly rotated image. The correctly rotated
             image itself will be returned in the extra directory from result, if return_extra is True.
+        ocr_samples (int): Number of times to run OCR on the image. The image is resized for multiple runs.
+            This can compensate for some OCR problems like missing bounding boxes. Defaults to 1.
         verbose (bool): Whether to print debug information during OCR processing.
             Defaults to False.
 
@@ -159,9 +161,12 @@ class GoogleOCR(OcrWrapper):
         max_size: Optional[int] = None,
         endpoint: Optional[str] = "eu-vision.googleapis.com",
         auto_rotate: bool = False,
+        ocr_samples: int = 1,
         verbose: bool = False,
     ):
-        super().__init__(cache_file=cache_file, max_size=max_size, auto_rotate=auto_rotate, verbose=verbose)
+        super().__init__(
+            cache_file=cache_file, max_size=max_size, auto_rotate=auto_rotate, ocr_samples=ocr_samples, verbose=verbose
+        )
         # Get credentials from environment variable of the offered default locations
         if not os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
             if os.path.isfile("/credentials.json"):

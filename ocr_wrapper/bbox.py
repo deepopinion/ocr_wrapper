@@ -107,7 +107,7 @@ class BBox:
     original_height: int  # Height of the image the bounding box is on, in pixels
 
     def __hash__(self):
-        return hash((self.coords, self.original_width, self.original_height))
+        return hash((self.coords, self.original_size))
 
     @property
     def coords(self):

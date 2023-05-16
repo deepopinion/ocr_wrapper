@@ -81,12 +81,12 @@ class OcrWrapper(ABC):
             angle = self.extra["document_rotation"]
             # Rotate image
             self.extra["rotated_image"] = rotate_image(original_img, angle)
-            new_width, new_height = self.extra["rotated_image"].size
+            new_size = self.extra["rotated_image"].size
             # Rotate boxes. The given rotation will be done counter-clockwise
             for r in result:
                 r["bbox"] = r["bbox"].rotate(angle)
-                # We have to set the new original width and height of the bounding box, since rotation might have changed it
-                r["bbox"].original_width, r["bbox"].original_height = new_width, new_height
+                # We have to set the new original size of the bounding box, since rotation might have changed it
+                r["bbox"].original_size = new_size
 
         if return_extra:
             return result, self.extra
@@ -100,7 +100,6 @@ class OcrWrapper(ABC):
         the external OCR engine multiple times.
         """
         responses = []
-        width, height = img.size
 
         # Get individual OCR responses in parallel
         def process_sample(i):
@@ -115,7 +114,7 @@ class OcrWrapper(ABC):
             for future in as_completed(futures):
                 responses.append(future.result())
 
-        response = aggregate_ocr_samples(responses, width, height)
+        response = aggregate_ocr_samples(responses, img.size)
 
         return response
 

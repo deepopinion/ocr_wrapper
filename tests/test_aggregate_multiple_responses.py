@@ -12,7 +12,8 @@ DATA_DIR = os.path.join(filedir, "data")
 def test_aggregate_ocr_samples():
     with open(os.path.join(DATA_DIR, "ocr_samples.pkl"), "rb") as f:
         ocr_samples = pickle.load(f)
-    ocr_samples = amr.aggregate_ocr_samples(ocr_samples, original_width=1110, original_height=875)
+    original_size = (1110, 875)
+    ocr_samples = amr.aggregate_ocr_samples(ocr_samples, original_size=original_size)
     assert len(ocr_samples) == 400
 
 

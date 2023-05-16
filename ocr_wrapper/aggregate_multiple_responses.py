@@ -150,7 +150,7 @@ def _add_single_bboxes(
     return best_response
 
 
-def aggregate_ocr_samples(responses: list[list[dict]], original_width: int, original_height: int) -> list[dict]:
+def aggregate_ocr_samples(responses: list[list[dict]], original_size: tuple[int, int]) -> list[dict]:
     """Given multiple responses of the same document page, aggregates them into a more reliable response."""
     if len(responses) == 1:  # If there is only one response, return it unchanged
         return responses[0]
@@ -178,8 +178,7 @@ def aggregate_ocr_samples(responses: list[list[dict]], original_width: int, orig
 
         # Assign the original image size to all bboxes
         for bbox_dict in best_response:
-            bbox_dict["bbox"].original_width = original_width
-            bbox_dict["bbox"].original_height = original_height
+            bbox_dict["bbox"].original_size = original_size
     else:
         raise NotImplementedError("Aggregating more than 2 responses is not yet implemented")
 

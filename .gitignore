@@ -8,3 +8,4 @@ venv/
 build
 /.hypothesis/
 /.venv/
+googlecache.gcache

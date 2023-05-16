@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import shelve
 from abc import ABC, abstractmethod
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -172,7 +173,7 @@ class OcrWrapper(ABC):
 
     def _get_from_shelf(self, img: Image.Image):
         """Get a OCR response from the cache, if it exists."""
-        if self.cache_file is not None:
+        if self.cache_file is not None and os.path.exists(self.cache_file):
             with shelve.open(self.cache_file, "r") as db:
                 img_bytes = self._pil_img_to_png(img)
                 img_hash = self._get_bytes_hash(img_bytes)

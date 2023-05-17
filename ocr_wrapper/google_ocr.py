@@ -159,9 +159,12 @@ class GoogleOCR(OcrWrapper):
         max_size: Optional[int] = None,
         endpoint: Optional[str] = "eu-vision.googleapis.com",
         auto_rotate: bool = False,
+        ocr_samples: int = 2,
         verbose: bool = False,
     ):
-        super().__init__(cache_file=cache_file, max_size=max_size, auto_rotate=auto_rotate, verbose=verbose)
+        super().__init__(
+            cache_file=cache_file, max_size=max_size, auto_rotate=auto_rotate, ocr_samples=ocr_samples, verbose=verbose
+        )
         # Get credentials from environment variable of the offered default locations
         if not os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
             if os.path.isfile("/credentials.json"):
@@ -198,9 +201,8 @@ class GoogleOCR(OcrWrapper):
         return response
 
     @requires_gcloud
-    def _convert_ocr_response(self, response) -> List[BBox]:
+    def _convert_ocr_response(self, response, *, sample_nr: int = 0) -> List[BBox]:
         """Converts the response given by Google OCR to a list of BBox"""
-        # Iterate over all responses except the first. The first is for the whole document -> ignore
         bboxes = []
         confidences = []
 
@@ -212,7 +214,7 @@ class GoogleOCR(OcrWrapper):
             bboxes.append(bbox)
             confidences.append(confidence)
 
-        self.extra.setdefault("confidences", []).append(confidences)
+        self.extra["confidences"][sample_nr] = confidences
 
         # Determine the rotation of the document
         if len(bboxes) > 0:

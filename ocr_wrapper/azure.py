@@ -70,7 +70,7 @@ class AzureOCR(OcrWrapper):
         return read_result
 
     @requires_azure
-    def _convert_ocr_response(self, response) -> List[BBox]:
+    def _convert_ocr_response(self, response, *, sample_nr: int = 0) -> List[BBox]:
         """Converts the response given by Azure Read to a list of BBox"""
         bboxes = []
         # Iterate over all responses

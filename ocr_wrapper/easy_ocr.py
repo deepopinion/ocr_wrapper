@@ -62,7 +62,7 @@ class EasyOCR(OcrWrapper):
         return response
 
     @requires_easyocr
-    def _convert_ocr_response(self, response) -> List[BBox]:
+    def _convert_ocr_response(self, response, *, sample_nr: int = 0) -> List[BBox]:
         """Converts the response given by EasyOCR to a list of BBox"""
         bboxes = []
         # Iterate over all responses except the first. The first is for the whole document -> ignore

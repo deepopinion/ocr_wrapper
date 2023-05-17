@@ -53,6 +53,7 @@ class OcrWrapper(ABC):
             img: Image to be processed
             return_extra: If True, returns a tuple of (bboxes, extra) where extra is a dict containing extra information
         """
+        self.extra = {}
         # Keep copy of original image
         original_img = img.copy()
         # Resize image if needed. If the image is smaller than max_size, it will be returned as is

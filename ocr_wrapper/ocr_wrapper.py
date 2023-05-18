@@ -90,15 +90,16 @@ class OcrWrapper(ABC):
         the external OCR engine multiple times.
         """
 
-        # We have to initialize confidences and responses here because the parallel executing threads need to be able to write to their position
-        # otherwise we don't have the correct order of both
+        # We have to initialize a few lists here because the parallel executing threads need to be able to write to their position
+        # otherwise we don't have the same order
         self.extra["confidences"] = [[] for _ in range(self.ocr_samples)]
+        self.extra["img_samples"] = [[] for _ in range(self.ocr_samples)]
         responses = [[] for _ in range(self.ocr_samples)]
 
         # Get individual OCR responses in parallel
         def process_sample(i):
             img_sample = generate_img_sample(img, i)
-            self.extra.setdefault("img_samples", []).append(img_sample)
+            self.extra["img_samples"][i] = img_sample
             response = self._get_ocr_response(img_sample)
             result = self._convert_ocr_response(response, sample_nr=i)
 

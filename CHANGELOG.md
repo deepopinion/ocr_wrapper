@@ -2,14 +2,20 @@
 The version numbers are according to [Semantic Versioning](http://semver.org/).
 (Versions prior to v1.0.0 might not strictly follow semantic versioning)
 
-## Release v0.0.7  (2023-??-??)
+## Release v0.0.8  (2023-??-??)
 ### Added
-- Added option to define a text brightness in `draw_bboxes` to make the text more readable
+
 ### Changed
 
 ### Fixed
 
 ### Removed
+
+## Release v0.0.7  (2023-05-18)
+### Added
+- Added option to define a text brightness in `draw_bboxes` to make the text more readable
+- Added confidence estimation to GoogleOCR
+- Added multi-pass OCR and set the default to 2 to improve OCR reliability
 
 ## Release v0.0.6  (2023-02-20)
 ### Added

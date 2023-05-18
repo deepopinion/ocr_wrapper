@@ -46,7 +46,15 @@ def _pillow_to_opencv_and_back(func):
 
 @_pillow_to_opencv_and_back
 def denoise_image_for_ocr(image):
-    # Denoise the image
-    denoised = cv2.fastNlMeansDenoisingColored(image, None, 10, 10, 7, 21)
+    # Denoise the image using fastNlMeansDenoisingColored with the following settings:
+    # See https://docs.opencv.org/4.7.0/d1/d79/group__photo__denoise.html#ga03aa4189fc3e31dafd638d90de335617
+    # h : Parameter regulating filter strength for luminance component.
+    #     Bigger h value perfectly removes noise but also removes image details, smaller h value preserves details but also preserves some noise
+    # hForColorComponents : The same as h but for color components.
+    #     For most images value equals 10 will be enough to remove colored noise and do not distort colors
+    # templateWindowSize : Size in pixels of the template patch that is used to compute weights. Should be odd. Recommended value 7 pixels
+    # searchWindowSize : Size in pixels of the window that is used to compute weighted average for given pixel.
+    #     Should be odd. Affect performance linearly: greater searchWindowsSize - greater denoising time. Recommended value 21 pixels
+    denoised = cv2.fastNlMeansDenoisingColored(image, None, h=10, hColor=10, templateWindowSize=7, searchWindowSize=21)
 
     return denoised

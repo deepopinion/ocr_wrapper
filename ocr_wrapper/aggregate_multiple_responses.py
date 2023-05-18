@@ -122,8 +122,9 @@ def _add_single_bboxes(
     overlap_threshold: float = 0.5,
 ) -> list[dict]:
     """
-    Adds single bounding boxes from bbox_groups to the best_response if their overlap with any
-    bounding box in best_response is less than the overlap_threshold.
+    Adds single bounding boxes from bbox_groups to the best_response if
+
+    - Their overlap with any bounding box in best_response is less than the overlap_threshold
 
     This can be used to enrich one response with bounding boxes that have been missed
 

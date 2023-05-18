@@ -1,13 +1,19 @@
 from __future__ import annotations
-from abc import ABC, abstractmethod
-from hashlib import sha256
 
+import os
 import shelve
+from abc import ABC, abstractmethod
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from hashlib import sha256
 from io import BytesIO
+from threading import Lock
 from typing import Optional, Union
 
 from PIL import Image, ImageDraw, ImageOps
+
+from .aggregate_multiple_responses import aggregate_ocr_samples, generate_img_sample
 from .bbox import BBox
+from .compat import bboxs2dicts, dicts2bboxs
 
 
 def rotate_image(image: Image.Image, angle: int) -> Image.Image:
@@ -30,7 +36,7 @@ def rotate_image(image: Image.Image, angle: int) -> Image.Image:
 
 class OcrWrapper(ABC):
     """Base class for OCR engines. Subclasses must implement ``_get_ocr_response``
-    and ``_conver_ocr_response``."""
+    and ``_convert_ocr_response``."""
 
     def __init__(
         self,
@@ -38,13 +44,16 @@ class OcrWrapper(ABC):
         cache_file: Optional[str] = None,
         max_size: Optional[int] = 1024,
         auto_rotate: bool = False,
+        ocr_samples: int = 2,
         verbose: bool = False,
     ):
         self.cache_file = cache_file
         self.max_size = max_size
         self.auto_rotate = auto_rotate
+        self.ocr_samples = ocr_samples
         self.verbose = verbose
         self.extra = {}  # Extra information to be returned by ocr()
+        self.shelve_mutex = Lock()  # Mutex to ensure that only one thread is writing to the cache file at a time
 
     def ocr(self, img: Image.Image, return_extra: bool = False) -> Union[list[BBox], tuple[list[BBox], dict]]:
         """Returns OCR result as a list of normalized BBox
@@ -60,12 +69,7 @@ class OcrWrapper(ABC):
         if self.max_size is not None:
             img = self._resize_image(img, self.max_size)
         # Get response from an OCR engine
-        response = self._get_ocr_response(img)
-        # Convert the response to our internal format
-        bboxes = self._convert_ocr_response(response)
-        # Normalize all boxes
-        width, height = img.size
-        bboxes = [bbox.to_normalized(img_width=width, img_height=height) for bbox in bboxes]
+        bboxes = self._get_multi_response(img)
 
         if self.auto_rotate and "document_rotation" in self.extra:
             angle = self.extra["document_rotation"]
@@ -77,6 +81,52 @@ class OcrWrapper(ABC):
         if return_extra:
             return bboxes, self.extra
         return bboxes
+
+    def _get_multi_response(self, img: Image.Image) -> list:
+        """Get OCR response from multiple samples of the same image.
+
+        The processing of the individual samples is done in parallel (using threads).
+        This does not run on multiple cores, but it is mitigating the latency of calling
+        the external OCR engine multiple times.
+        """
+
+        # We have to initialize a few lists here because the parallel executing threads need to be able to write to their position
+        # otherwise we don't have the same order
+        self.extra["confidences"] = [[] for _ in range(self.ocr_samples)]
+        self.extra["img_samples"] = [[] for _ in range(self.ocr_samples)]
+        responses = [[] for _ in range(self.ocr_samples)]
+
+        # Get individual OCR responses in parallel
+        def process_sample(i):
+            img_sample = generate_img_sample(img, i)
+            self.extra["img_samples"][i] = img_sample
+            response = self._get_ocr_response(img_sample)
+            result = self._convert_ocr_response(response, sample_nr=i)
+
+            # Normalize boxes
+            width, height = img_sample.size
+            result = [bbox.to_normalized(img_width=width, img_height=height) for bbox in result]
+            return result, i
+
+        with ThreadPoolExecutor() as executor:
+            futures = {executor.submit(process_sample, i) for i in range(self.ocr_samples)}
+
+            for future in as_completed(futures):
+                response, i = future.result()
+                responses[i] = response
+
+        # Convert to new format as dicts
+        new_format_responses = []
+        for response, confidence in zip(responses, self.extra["confidences"]):
+            new_format_response = bboxs2dicts(response, confidence)
+            new_format_responses.append(new_format_response)
+
+        response = aggregate_ocr_samples(new_format_responses, img.size)
+
+        # Convert back to old format
+        response_old_format, new_confidences = dicts2bboxs(response)
+        self.extra["confidences"] = [new_confidences]
+        return response_old_format
 
     @staticmethod
     def _resize_image(img: Image.Image, max_size: int) -> Image.Image:
@@ -97,7 +147,7 @@ class OcrWrapper(ABC):
         pass
 
     @abstractmethod
-    def _convert_ocr_response(self, response) -> list[BBox]:
+    def _convert_ocr_response(self, response, *, sample_nr: int = 0) -> list[BBox]:
         pass
 
     @staticmethod
@@ -134,19 +184,20 @@ class OcrWrapper(ABC):
 
     def _get_from_shelf(self, img: Image.Image):
         """Get a OCR response from the cache, if it exists."""
-        if self.cache_file is not None:
-            with shelve.open(self.cache_file) as db:
-                img_bytes = self._pil_img_to_png(img)
-                img_hash = self._get_bytes_hash(img_bytes)
-                if img_hash in db.keys():  # We have a cached version
-                    if self.verbose:
-                        print(f"Using cached results for hash {img_hash}")
-                    return db[img_hash]
-        return None
+        if self.cache_file is not None and os.path.exists(self.cache_file):
+            with self.shelve_mutex:
+                with shelve.open(self.cache_file, "r") as db:
+                    img_bytes = self._pil_img_to_png(img)
+                    img_hash = self._get_bytes_hash(img_bytes)
+                    if img_hash in db.keys():  # We have a cached version
+                        if self.verbose:
+                            print(f"Using cached results for hash {img_hash}")
+                        return db[img_hash]
 
     def _put_on_shelf(self, img: Image.Image, response):
         if self.cache_file is not None:
-            with shelve.open(self.cache_file) as db:
-                img_bytes = self._pil_img_to_png(img)
-                img_hash = self._get_bytes_hash(img_bytes)
-                db[img_hash] = response
+            with self.shelve_mutex:
+                with shelve.open(self.cache_file, "c") as db:
+                    img_bytes = self._pil_img_to_png(img)
+                    img_hash = self._get_bytes_hash(img_bytes)
+                    db[img_hash] = response

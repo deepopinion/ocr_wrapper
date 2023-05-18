@@ -45,7 +45,7 @@ class AwsOCR(OcrWrapper):
         return response
 
     @requires_boto
-    def _convert_ocr_response(self, response) -> List[BBox]:
+    def _convert_ocr_response(self, response, *, sample_nr: int = 0) -> List[BBox]:
         """Converts the response given by Google OCR to a list of BBox"""
         bboxes = []
         # Iterate over all responses

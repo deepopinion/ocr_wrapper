@@ -4,6 +4,7 @@ import dataclasses
 import json
 import os
 from dataclasses import dataclass
+from functools import lru_cache
 from random import random
 from typing import Optional, Union
 from uuid import uuid4
@@ -11,9 +12,6 @@ from uuid import uuid4
 from PIL import Image, ImageColor, ImageDraw, ImageFont
 from shapely import affinity
 from shapely.geometry import Polygon
-
-
-from PIL import ImageColor
 
 
 def get_color_with_defined_brightness(color, goal_brightness=0.5):
@@ -104,6 +102,23 @@ class BBox:
     )
     text: Optional[str] = None
     label: Optional[str] = None
+
+    def __hash__(self):
+        return hash(
+            (
+                self.TLx,
+                self.TLy,
+                self.TRx,
+                self.TRy,
+                self.BRx,
+                self.BRy,
+                self.BLx,
+                self.BLy,
+                self.in_pixels,
+                self.text,
+                self.label,
+            )
+        )
 
     def __post_init__(
         self,
@@ -497,6 +512,7 @@ class BBox:
 
         return res
 
+    @lru_cache(maxsize=16000)
     def get_shapely_polygon(self) -> Polygon:
         """Returns the bounding box as a shapely polygon"""
         tl = (self.TLx, self.TLy)

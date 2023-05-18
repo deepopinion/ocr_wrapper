@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="ocr_wrapper",
-    version="0.0.6",
+    version="0.0.7",
     packages=find_packages(),
     include_package_data=True,
     license="MIT",
@@ -13,6 +13,6 @@ setup(
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",
     ],
-    install_requires=["Pillow", "Shapely", "pdf2image"],
+    install_requires=["Pillow", "Shapely", "pdf2image", "rtree", "opencv-python-headless"],
     zip_safe=False,
 )

@@ -89,10 +89,11 @@ class OcrWrapper(ABC):
         This does not run on multiple cores, but it is mitigating the latency of calling
         the external OCR engine multiple times.
         """
-        responses = []
 
-        # We have to initialize confidences here because the parallel executing threads need to be able to write to their position
+        # We have to initialize confidences and responses here because the parallel executing threads need to be able to write to their position
+        # otherwise we don't have the correct order of both
         self.extra["confidences"] = [[] for _ in range(self.ocr_samples)]
+        responses = [[] for _ in range(self.ocr_samples)]
 
         # Get individual OCR responses in parallel
         def process_sample(i):
@@ -104,13 +105,14 @@ class OcrWrapper(ABC):
             # Normalize boxes
             width, height = img_sample.size
             result = [bbox.to_normalized(img_width=width, img_height=height) for bbox in result]
-            return result
+            return result, i
 
         with ThreadPoolExecutor() as executor:
             futures = {executor.submit(process_sample, i) for i in range(self.ocr_samples)}
 
             for future in as_completed(futures):
-                responses.append(future.result())
+                response, i = future.result()
+                responses[i] = response
 
         # Convert to new format as dicts
         new_format_responses = []

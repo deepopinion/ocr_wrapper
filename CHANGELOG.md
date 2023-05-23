@@ -5,7 +5,11 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 ## Release v1.1.0  (2023-??-??)
 ### Added
 - Added the output of confidence scores to GoogleOCR
+- Added multiple OCR passes to improve OCR reliability
 ### Changed
+
+### Fixed
+- Adds forced conversion to RGB in pillow before sending data to OpenCV to fix a possible bug in Studio
 
 ### Removed
 

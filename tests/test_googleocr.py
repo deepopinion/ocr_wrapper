@@ -28,12 +28,12 @@ rotation_test_documents = [
 
 @pytest.fixture
 def ocr():
-    return GoogleOCR()
+    return GoogleOCR(ocr_samples=2)
 
 
 @pytest.fixture
 def ocr_with_auto_rotate():
-    return GoogleOCR(auto_rotate=True)
+    return GoogleOCR(auto_rotate=True, ocr_samples=2)
 
 
 # Fixture for unrotated bboxes
@@ -69,8 +69,8 @@ def test_google_ocr_auto_rotation(unrotated_bboxes, ocr_with_auto_rotate):
             assert unrot["bbox"].to_normalized() == pytest.approx(rot["bbox"].to_normalized(), abs=0.1)
 
 
-def test_document_without_text(ocr_with_auto_rotate):
-    filename = "no_ocr.png"
+@pytest.mark.parametrize("filename", ["no_ocr.png", "no_ocr.tif"])
+def test_document_without_text(ocr_with_auto_rotate, filename):
     img = Image.open(os.path.join(DATA_DIR, filename))
     res = ocr_with_auto_rotate.ocr(img)
     assert len(res) == 0

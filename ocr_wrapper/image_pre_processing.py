@@ -9,6 +9,7 @@ from PIL import Image
 
 def _pillow_to_opencv(pillow_image: Image.Image):
     """Convert the Pillow image to OpenCV format (numpy array)"""
+    pillow_image = pillow_image.convert("RGB")
     cv_image = np.array(pillow_image)
     cv_image = cv2.cvtColor(cv_image, cv2.COLOR_RGB2BGR)
     return cv_image

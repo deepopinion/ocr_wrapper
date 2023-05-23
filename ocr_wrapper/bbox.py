@@ -693,7 +693,7 @@ def draw_bboxes(
             f"strokewidths ({len(strokewidths)}) and fill_colors ({len(fill_colors)}) and "
             f"fill_opacities ({len(fill_opacities)}) must be the same"
         )
-    img = img.copy()  # Make a copy of the image to not modify the original
+    img = img.convert("RGB")
     draw = ImageDraw.Draw(img, "RGBA")
     width, height = img.size
 

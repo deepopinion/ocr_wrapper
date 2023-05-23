@@ -9,7 +9,7 @@ DATA_DIR = os.path.join(filedir, "data")
 
 @pytest.fixture
 def ocr():
-    return GoogleOCR()
+    return GoogleOCR(ocr_samples=2)
 
 
 def test_google_ocr(ocr):
@@ -50,7 +50,7 @@ def test_google_ocr_rotation(ocr, filename, rotation):
 
 @pytest.fixture
 def ocr_with_auto_rotate():
-    return GoogleOCR(auto_rotate=True)
+    return GoogleOCR(auto_rotate=True, ocr_samples=2)
 
 
 # Fixture for unrotated bboxes
@@ -70,8 +70,8 @@ def test_google_ocr_auto_rotation(unrotated_bboxes, ocr_with_auto_rotate):
             assert unrot_bbox.get_float_list() == pytest.approx(rot_bbox.get_float_list(), abs=0.1)
 
 
-def test_document_without_text(ocr_with_auto_rotate):
-    filename = "no_ocr.png"
+@pytest.mark.parametrize("filename", ["no_ocr.png", "no_ocr.tif"])
+def test_document_without_text(ocr_with_auto_rotate, filename):
     img = Image.open(os.path.join(DATA_DIR, filename))
     res = ocr_with_auto_rotate.ocr(img)
     assert len(res) == 0

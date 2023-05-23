@@ -8,7 +8,7 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 ### Changed
 
 ### Fixed
-
+- Adds forced conversion to RGB in pillow before sending data to OpenCV to fix a possible bug in Studio
 ### Removed
 
 ## Release v0.0.7  (2023-05-18)

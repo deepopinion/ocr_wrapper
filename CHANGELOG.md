@@ -11,6 +11,15 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 - Adds forced conversion to RGB in pillow before sending data to OpenCV to fix a possible bug in Studio
 ### Removed
 
+## Release v0.0.8  (2023-??-??)
+### Added
+
+### Changed
+
+### Fixed
+- Adds forced conversion to RGB in pillow before sending data to OpenCV to fix a possible bug in Studio
+### Removed
+
 ## Release v0.0.7  (2023-05-18)
 ### Added
 - Added option to define a text brightness in `draw_bboxes` to make the text more readable

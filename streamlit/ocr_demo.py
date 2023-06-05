@@ -25,6 +25,7 @@ auto_rotate = st.checkbox("Auto rotate image")
 output_order = st.checkbox("Output OCR box order")
 output_text = st.checkbox("Output OCR text")
 show_confidence = st.checkbox("Show confidence (low confidence is a darker blue)")
+show_bbox_code = st.checkbox("Show bbox code")
 ocr_samples: int = st.number_input("Number of OCR samples", min_value=1, max_value=10, value=2)
 
 if uploaded_file is not None:
@@ -74,6 +75,9 @@ if uploaded_file is not None:
             fontsize=10,
         )
         st.image(img)
+
+        if show_bbox_code:
+            st.write(bboxes)
 
     # End time measurement and print time
     end = time.time()

@@ -163,7 +163,12 @@ class GoogleOCR(OcrWrapper):
         verbose: bool = False,
     ):
         super().__init__(
-            cache_file=cache_file, max_size=max_size, auto_rotate=auto_rotate, ocr_samples=ocr_samples, verbose=verbose
+            cache_file=cache_file,
+            max_size=max_size,
+            auto_rotate=auto_rotate,
+            ocr_samples=ocr_samples,
+            supports_multi_samples=True,
+            verbose=verbose,
         )
         # Get credentials from environment variable of the offered default locations
         if not os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):

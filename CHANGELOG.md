@@ -2,15 +2,20 @@
 The version numbers are according to [Semantic Versioning](http://semver.org/).
 (Versions prior to v1.0.0 might not strictly follow semantic versioning)
 
-## Release v0.0.9  (2023-??-??)
+## Release v0.0.10  (2023-??-??)
 ### Added
 
 ### Changed
 
 ### Fixed
+
+### Removed
+
+
+## Release v0.0.9  (2023-09-07)
+### Fixed
 - Fixed a problem whene trying to use multi-pass with OCR engines that don't support it yet. Now the system will return a warning message and use the single-pass option instead. (Currently only GoogleOCR is supported for multi-pass)
 - A rare bug where self-intersecting bounding boxes cause the OCR system to crash when using multi-pass OCR
-### Removed
 
 ## Release v0.0.8  (2023-05-23)
 ### Fixed

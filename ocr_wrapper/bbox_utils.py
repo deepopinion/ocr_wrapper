@@ -16,6 +16,9 @@ def bbox_intersection_area_ratio(bb1: BBox, bb2: BBox) -> float:
     """
     self_poly = bb1.get_shapely_polygon()
     that_poly = bb2.get_shapely_polygon()
+    # Sometimes the polygons are invalid (usually because of self-intersection), in which case we return 0.0. We should have a closer look why this happens, but for now it seems to be a rare occurence and this is a quick fix that doesn't seem to affect the results much.
+    if not self_poly.is_valid or not that_poly.is_valid:
+        return 0.0
     if self_poly.intersects(that_poly):
         inter_poly = self_poly.intersection(that_poly)
         return inter_poly.area / self_poly.area

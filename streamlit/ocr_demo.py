@@ -19,6 +19,15 @@ def whiten_image(img: Image.Image, amount: float) -> Image.Image:
     return Image.blend(img, Image.new("RGB", img.size, (255, 255, 255)), amount)
 
 
+def resize_min(img: Image.Image, min_size: int) -> Image.Image:
+    """Resizes an image so that the smallest dimension is at least min_size"""
+    w, h = img.size
+    if w < h:
+        return img.resize((min_size, int(h * min_size / w)))
+    else:
+        return img.resize((int(w * min_size / h), min_size))
+
+
 # Allow uploading of PDFs
 uploaded_file = st.file_uploader("Choose a file")
 # Allow selection of whether to output ocr box order
@@ -44,6 +53,7 @@ if uploaded_file is not None:
 
     for page in pages:
         bboxes, extras = ocr.ocr(page, return_extra=True)
+
         bboxes = bboxs2dicts(bboxes, extras["confidences"][0])
 
         if auto_rotate:
@@ -65,17 +75,20 @@ if uploaded_file is not None:
         else:
             fill_opacities = 0.2
 
+        img = resize_min(page, 2048)
+
         img = draw_bboxes(
-            img=page,
+            img=img,
             bboxes=[bbox["bbox"] for bbox in bboxes],
             strokewidths=0,  # Could also be a list for each bbox
             colors="blue",
             fill_colors="blue",
             fill_opacities=fill_opacities,
             texts=texts,
-            fontsize=10,
+            fontsize=15,
         )
         st.image(img)
+        st.markdown(f"Number of OCR boxes: {len(bboxes)}")
         if "img_samples" in extras:
             st.markdown("### Image samples")
             for img_sample in extras["img_samples"]:

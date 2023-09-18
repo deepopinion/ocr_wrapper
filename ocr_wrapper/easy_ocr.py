@@ -75,5 +75,5 @@ class EasyOCR(OcrWrapper):
         try:
             self.extra["confidences"][sample_nr] = confidences
         except KeyError:
-            self.extra["confidences"] = confidences # not using multipass
+            self.extra["confidences"] = confidences  # not using multipass
         return bboxes

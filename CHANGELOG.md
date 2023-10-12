@@ -6,6 +6,8 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 ### Added
 - Added the output of confidence scores to GoogleOCR
 - Added multiple OCR passes to improve OCR reliability
+- Adds an environment variable `OCR_WRAPPER_CACHE_FILE` to specify an ocr cache file globally
+
 ### Changed
 
 ### Fixed

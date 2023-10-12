@@ -46,6 +46,8 @@ class OcrWrapper(ABC):
         ocr_samples: int = 2,
         verbose: bool = False,
     ):
+        if cache_file is None:
+            cache_file = os.getenv("OCR_WRAPPER_CACHE_FILE", None)
         self.cache_file = cache_file
         self.max_size = max_size
         self.auto_rotate = auto_rotate

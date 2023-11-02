@@ -13,6 +13,7 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 ### Fixed
 - Adds forced conversion to RGB in pillow before sending data to OpenCV to fix a possible bug in Studio
 - Fixes a rare bug where self-intersecting bounding boxes caused the OCR system to crash when using multi-pass OCR
+
 ### Removed
 
 

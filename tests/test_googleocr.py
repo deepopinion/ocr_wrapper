@@ -45,7 +45,15 @@ def unrotated_bboxes(ocr):
 
 def test_google_ocr(ocr):
     img = Image.open(os.path.join(DATA_DIR, "ocr_test_big.png"))
+    res = ocr.ocr(img)
+    text = " ".join([r["text"] for r in res])
+    assert text == "This is a test ."
+    assert all([r["bbox"].original_size == img.size for r in res])
 
+
+def test_google_orc_single_sample():
+    img = Image.open(os.path.join(DATA_DIR, "ocr_test_big.png"))
+    ocr = GoogleOCR(auto_rotate=True, ocr_samples=1)
     res = ocr.ocr(img)
     text = " ".join([r["text"] for r in res])
     assert text == "This is a test ."

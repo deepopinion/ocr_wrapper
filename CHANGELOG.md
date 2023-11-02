@@ -9,7 +9,7 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 - Adds an environment variable `OCR_WRAPPER_CACHE_FILE` to specify an ocr cache file globally
 
 ### Changed
-
+- Changed GoogleOCR to use WebP instead of PNG to transfer images to the cloud (reduces amount of transferred data by ~ 1/2)
 ### Fixed
 - Adds forced conversion to RGB in pillow before sending data to OpenCV to fix a possible bug in Studio
 - Fixes a rare bug where self-intersecting bounding boxes caused the OCR system to crash when using multi-pass OCR

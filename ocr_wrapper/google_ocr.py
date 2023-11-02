@@ -182,7 +182,7 @@ class GoogleOCR(OcrWrapper):
         """Gets the OCR response from the Google cloud. Uses cached response if a cache file has been specified and the
         document has been OCRed already"""
         # Pack image in correct format
-        img_bytes = self._pil_img_to_png(img)
+        img_bytes = self._pil_img_to_compressed(img, compression="webp")
         vision_img = vision.Image(content=img_bytes)
 
         response = self._get_from_shelf(img)  # Try to get cached response

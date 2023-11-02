@@ -62,7 +62,7 @@ class AzureOCR(OcrWrapper):
         """Gets the OCR response from the Azure. Uses cached response if a cache file has been specified and the
         document has been OCRed already"""
         # Pack image in correct format
-        img_bytes = self._pil_img_to_png(img)
+        img_bytes = self._pil_img_to_compressed(img)
         img_stream = BytesIO(img_bytes)
 
         # Try to get cached response

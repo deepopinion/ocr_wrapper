@@ -64,10 +64,16 @@ class EasyOCR(OcrWrapper):
     @requires_easyocr
     def _convert_ocr_response(self, response, *, sample_nr: int = 0) -> List[BBox]:
         """Converts the response given by EasyOCR to a list of BBox"""
-        bboxes = []
+        bboxes, confidences = [], []
         # Iterate over all responses except the first. The first is for the whole document -> ignore
         for bbox, text, score in response:
             bbox = BBox.from_easy_ocr_output(bbox)
             bbox.text = text
             bboxes.append(bbox)
+            confidences.append(score)
+
+        try:
+            self.extra["confidences"][sample_nr] = confidences
+        except KeyError:
+            self.extra["confidences"] = confidences  # not using multipass
         return bboxes

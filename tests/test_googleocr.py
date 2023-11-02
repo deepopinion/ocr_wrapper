@@ -6,21 +6,6 @@ import pytest
 filedir = os.path.dirname(__file__)
 DATA_DIR = os.path.join(filedir, "data")
 
-
-@pytest.fixture
-def ocr():
-    return GoogleOCR(ocr_samples=2)
-
-
-def test_google_ocr(ocr):
-    img = Image.open(os.path.join(DATA_DIR, "ocr_test_big.png"))
-
-    res, extra = ocr.ocr(img, return_extra=True)
-    text = " ".join([str(r.text) for r in res])
-    assert text == "This is a test ."
-    assert len(extra["confidences"][0]) == len(res)
-
-
 # Define filename, rotation list
 rotation_test_documents = [
     # English text
@@ -41,11 +26,9 @@ rotation_test_documents = [
 ]
 
 
-@pytest.mark.parametrize("filename, rotation", rotation_test_documents)
-def test_google_ocr_rotation(ocr, filename, rotation):
-    img = Image.open(os.path.join(DATA_DIR, filename))
-    _, extras = ocr.ocr(img, return_extra=True)
-    assert extras["document_rotation"] == rotation
+@pytest.fixture
+def ocr():
+    return GoogleOCR(ocr_samples=2)
 
 
 @pytest.fixture
@@ -58,6 +41,32 @@ def ocr_with_auto_rotate():
 def unrotated_bboxes(ocr):
     img = Image.open(os.path.join(DATA_DIR, "ocr_test.png"))
     return ocr.ocr(img)
+
+
+def test_google_ocr(ocr):
+    img = Image.open(os.path.join(DATA_DIR, "ocr_test_big.png"))
+
+    res, extra = ocr.ocr(img, return_extra=True)
+    text = " ".join([str(r.text) for r in res])
+    assert text == "This is a test ."
+    assert len(extra["confidences"][0]) == len(res)
+
+
+def test_google_orc_single_sample():
+    img = Image.open(os.path.join(DATA_DIR, "ocr_test_big.png"))
+    ocr = GoogleOCR(auto_rotate=True, ocr_samples=1)
+
+    res, extra = ocr.ocr(img, return_extra=True)
+    text = " ".join([str(r.text) for r in res])
+    assert text == "This is a test ."
+    assert len(extra["confidences"][0]) == len(res)
+
+
+@pytest.mark.parametrize("filename, rotation", rotation_test_documents)
+def test_google_ocr_rotation(ocr, filename, rotation):
+    img = Image.open(os.path.join(DATA_DIR, filename))
+    _, extras = ocr.ocr(img, return_extra=True)
+    assert extras["document_rotation"] == rotation
 
 
 def test_google_ocr_auto_rotation(unrotated_bboxes, ocr_with_auto_rotate):

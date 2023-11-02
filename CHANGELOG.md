@@ -6,7 +6,7 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 ### Added
 
 ### Changed
-
+- Changed GoogleOCR to use WebP instead of PNG to transfer images to the cloud (reduces amount of transferred data by ~ 1/2)
 ### Fixed
 - Fixed a bug that prevented Google OCR from working with one sample
 

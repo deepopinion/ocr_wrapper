@@ -193,10 +193,16 @@ class OcrWrapper(ABC):
         return image, " ".join(all_text)
 
     @staticmethod
-    def _pil_img_to_png(image: Image.Image) -> bytes:
-        """Converts a pil image to png in memory"""
+    def _pil_img_to_compressed(image: Image.Image, compression: str = "png") -> bytes:
+        """Converts a pil image to "compressed" image (e.g. png, webp) in memory"""
         with BytesIO() as output:
-            image.save(output, "PNG")
+            if compression.lower() == "png":
+                image.save(output, "PNG", compress_level=5)
+            elif compression.lower() == "webp":
+                image.save(output, "WebP", lossless=True, quality=0)
+            else:
+                raise Exception(f"Unsupported compression: {compression}")
+
             output.seek(0)
             return output.read()
 
@@ -213,7 +219,7 @@ class OcrWrapper(ABC):
         if self.cache_file is not None and os.path.exists(self.cache_file):
             with self.shelve_mutex:
                 with shelve.open(self.cache_file, "r") as db:
-                    img_bytes = self._pil_img_to_png(img)
+                    img_bytes = self._pil_img_to_compressed(img)
                     img_hash = self._get_bytes_hash(img_bytes)
                     if img_hash in db.keys():  # We have a cached version
                         if self.verbose:
@@ -224,6 +230,6 @@ class OcrWrapper(ABC):
         if self.cache_file is not None:
             with self.shelve_mutex:
                 with shelve.open(self.cache_file, "c") as db:
-                    img_bytes = self._pil_img_to_png(img)
+                    img_bytes = self._pil_img_to_compressed(img)
                     img_hash = self._get_bytes_hash(img_bytes)
                     db[img_hash] = response

@@ -2,17 +2,22 @@
 The version numbers are according to [Semantic Versioning](http://semver.org/).
 (Versions prior to v1.0.0 might not strictly follow semantic versioning)
 
-## Release v0.0.10  (2023-??-??)
+## Next Release
+### Added
+
+### Changed
+
+### Fixed
+
+### Removed
+
+## Release v0.0.10  (2023-11-02)
 ### Added
 - Adds an environment variable `OCR_WRAPPER_CACHE_FILE` to specify an ocr cache file globally
-
 ### Changed
 - Changed GoogleOCR to use WebP instead of PNG to transfer images to the cloud (reduces amount of transferred data by ~ 1/2)
 ### Fixed
 - Fixed a bug that prevented Google OCR from working with one sample
-
-### Removed
-
 
 ## Release v0.0.9  (2023-09-07)
 ### Fixed

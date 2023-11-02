@@ -55,13 +55,9 @@ class OcrWrapper(ABC):
         self.supports_multi_samples = supports_multi_samples
         self.verbose = verbose
         self.extra = {}  # Extra information to be returned by ocr()
-        self.shelve_mutex = (
-            Lock()
-        )  # Mutex to ensure that only one thread is writing to the cache file at a time
+        self.shelve_mutex = Lock()  # Mutex to ensure that only one thread is writing to the cache file at a time
 
-    def ocr(
-        self, img: Image.Image, return_extra: bool = False
-    ) -> Union[list[BBox], tuple[list[BBox], dict]]:
+    def ocr(self, img: Image.Image, return_extra: bool = False) -> Union[list[BBox], tuple[list[BBox], dict]]:
         """Returns OCR result as a list of normalized BBox
 
         Args:
@@ -83,17 +79,12 @@ class OcrWrapper(ABC):
         # Get response from an OCR engine
         if self.ocr_samples == 1 or not self.supports_multi_samples:
             if self.ocr_samples > 1 and self.verbose:
-                print(
-                    "Warning: This OCR engine does not support multiple samples. Using only one sample."
-                )
+                print("Warning: This OCR engine does not support multiple samples. Using only one sample.")
             ocr = self._get_ocr_response(img)
             bboxes = self._convert_ocr_response(ocr)
             # Normalize all boxes
             width, height = img.size
-            bboxes = [
-                bbox.to_normalized(img_width=width, img_height=height)
-                for bbox in bboxes
-            ]
+            bboxes = [bbox.to_normalized(img_width=width, img_height=height) for bbox in bboxes]
         else:
             bboxes = self._get_multi_response(img)
 
@@ -126,16 +117,11 @@ class OcrWrapper(ABC):
 
             # Normalize boxes
             width, height = img_sample.size
-            result = [
-                bbox.to_normalized(img_width=width, img_height=height)
-                for bbox in result
-            ]
+            result = [bbox.to_normalized(img_width=width, img_height=height) for bbox in result]
             return result, i
 
         with ThreadPoolExecutor() as executor:
-            futures = {
-                executor.submit(process_sample, i) for i in range(self.ocr_samples)
-            }
+            futures = {executor.submit(process_sample, i) for i in range(self.ocr_samples)}
 
             for future in as_completed(futures):
                 response, i = future.result()

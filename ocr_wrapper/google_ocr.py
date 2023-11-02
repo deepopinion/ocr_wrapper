@@ -28,7 +28,20 @@ def requires_gcloud(fn):
 
 
 # Define a list of languages which are written from right to left. This is needed to determine the rotation of the document
-rtl_languages = ["ar", "arc", "dv", "fa", "ha", "he", "khw", "ks", "ku", "ps", "ur", "yi"]
+rtl_languages = [
+    "ar",
+    "arc",
+    "dv",
+    "fa",
+    "ha",
+    "he",
+    "khw",
+    "ks",
+    "ku",
+    "ps",
+    "ur",
+    "yi",
+]
 
 
 def get_mean_symbol_deltas(response):

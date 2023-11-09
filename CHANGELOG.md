@@ -1,4 +1,4 @@
-# UCN Changelog
+# ocr_wrapper Changelog
 The version numbers are according to [Semantic Versioning](http://semver.org/).
 (Versions prior to v1.0.0 might not strictly follow semantic versioning)
 

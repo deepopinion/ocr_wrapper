@@ -2,14 +2,21 @@
 The version numbers are according to [Semantic Versioning](http://semver.org/).
 (Versions prior to v1.0.0 might not strictly follow semantic versioning)
 
-## Next Release
+## Release v0.0.xx ()
 ### Added
-- Extended the possibilities on how to provide endpoint and key for Azure OCR in addition to the `credentials.json`. Have a look at the README.md for details.
+
 ### Changed
 
 ### Fixed
-- Brings AzureOCR to a fully working state again. It has full functionality, with the exception for multi-pass OCR (which might not be needed for Azure though)
+
 ### Removed
+
+
+## Release v0.0.11 (2023-11-09)
+### Added
+- Extended the possibilities on how to provide endpoint and key for Azure OCR in addition to the `credentials.json`. Have a look at the README.md for details.
+### Fixed
+- Brings AzureOCR to a fully working state again. It has full functionality, with the exception for multi-pass OCR (which might not be needed for Azure though)
 
 ## Release v0.0.10  (2023-11-02)
 ### Added

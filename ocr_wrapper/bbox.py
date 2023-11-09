@@ -613,7 +613,7 @@ class BBox:
             label=self.label,
         )
 
-    def rotate(self, angle: Int) -> "BBox":
+    def rotate(self, angle: int) -> "BBox":
         """
         Rotates the bbox by angle degrees counter clockwise around (0,0)
 

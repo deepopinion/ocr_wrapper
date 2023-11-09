@@ -8,7 +8,7 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 ### Changed
 
 ### Fixed
-
+- Brings AzureOCR to a fully working state again. It has full functionality, with the exception for multi-pass OCR (which might not be needed for Azure though)
 ### Removed
 
 ## Release v0.0.10  (2023-11-02)

@@ -31,10 +31,30 @@ def requires_azure(fn):
     return wrapper_decocator
 
 
+def _discretize_angle_to_90_deg(rotation: float) -> int:
+    """Discretize an angle to the nearest 90 degrees"""
+    return int(((rotation + 45) // 90 * 90) % 360)
+
+
 class AzureOCR(OcrWrapper):
     @requires_azure
-    def __init__(self, *, cache_file: Optional[str] = None, max_size: Optional[int] = 1024, verbose: bool = False):
-        super().__init__(cache_file=cache_file, max_size=max_size, verbose=verbose)
+    def __init__(
+        self,
+        *,
+        cache_file: Optional[str] = None,
+        max_size: Optional[int] = None,
+        auto_rotate: bool = False,
+        ocr_samples: int = 1,
+        verbose: bool = False
+    ):
+        super().__init__(
+            cache_file=cache_file,
+            max_size=max_size,
+            auto_rotate=auto_rotate,
+            ocr_samples=ocr_samples,
+            supports_multi_samples=False,
+            verbose=verbose,
+        )
         keyfile = "~/.config/azure/ocr_credentials.json"
         with open(os.path.expanduser(keyfile), mode="r") as f:
             ocr_credentials = json.load(f)
@@ -48,7 +68,7 @@ class AzureOCR(OcrWrapper):
         """Gets the OCR response from the Azure. Uses cached response if a cache file has been specified and the
         document has been OCRed already"""
         # Pack image in correct format
-        img_bytes = self._pil_img_to_compressed(img)
+        img_bytes = self._pil_img_to_compressed(img, compression="png")
         img_stream = BytesIO(img_bytes)
 
         # Try to get cached response
@@ -73,10 +93,20 @@ class AzureOCR(OcrWrapper):
     def _convert_ocr_response(self, response, *, sample_nr: int = 0) -> List[BBox]:
         """Converts the response given by Azure Read to a list of BBox"""
         bboxes = []
+        confidences = []
+
         # Iterate over all responses
         for annotation in response.analyze_result.read_results:
             for line in annotation.lines:
                 for word in line.words:
                     bbox = BBox.from_float_list(word.bounding_box, text=word.text, in_pixels=True)
                     bboxes.append(bbox)
+                    confidences.append(word.confidence)
+
+        self.extra["confidences"][sample_nr] = confidences
+
+        # Determine rotation of document
+        page_rotation = response.analyze_result.read_results[0].angle
+        self.extra["document_rotation"] = _discretize_angle_to_90_deg(page_rotation)
+
         return bboxes

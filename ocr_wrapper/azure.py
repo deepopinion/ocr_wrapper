@@ -36,6 +36,30 @@ def _discretize_angle_to_90_deg(rotation: float) -> int:
     return int(((rotation + 45) // 90 * 90) % 360)
 
 
+def _determine_endpoint_and_key(endpoint: Optional[str], key: Optional[str]) -> tuple[str, str]:
+    """Determine the endpoint and key to be used.
+
+    If endpoint and key are both None, the values are looked up in the environment variables AZURE_OCR_ENDPOINT and
+    AZURE_OCR_KEY. If these are not set, the values are read from the file ~/.config/azure/ocr_credentials.json.
+
+    If only one of endpoint and key is None, only the other one is looked up in the environment variables and the file.
+    """
+    if endpoint is None:
+        endpoint = os.environ.get("AZURE_OCR_ENDPOINT")
+    if key is None:
+        key = os.environ.get("AZURE_OCR_KEY")
+    if endpoint is None or key is None:
+        if os.path.exists(os.path.expanduser("~/.config/azure/ocr_credentials.json")):
+            with open(os.path.expanduser("~/.config/azure/ocr_credentials.json")) as f:
+                data = json.load(f)
+                endpoint = endpoint or data.get("endpoint")
+                key = key or data.get("key")
+    if endpoint is None or key is None:
+        raise Exception("Azure endpoint and key must be specified via some means")
+
+    return endpoint, key
+
+
 class AzureOCR(OcrWrapper):
     @requires_azure
     def __init__(
@@ -45,6 +69,8 @@ class AzureOCR(OcrWrapper):
         max_size: Optional[int] = None,
         auto_rotate: bool = False,
         ocr_samples: int = 1,
+        endpoint: Optional[str] = None,
+        key: Optional[str] = None,
         verbose: bool = False
     ):
         super().__init__(
@@ -55,13 +81,8 @@ class AzureOCR(OcrWrapper):
             supports_multi_samples=False,
             verbose=verbose,
         )
-        keyfile = "~/.config/azure/ocr_credentials.json"
-        with open(os.path.expanduser(keyfile), mode="r") as f:
-            ocr_credentials = json.load(f)
-        self.client = ComputerVisionClient(
-            endpoint=ocr_credentials["endpoint"],
-            credentials=CognitiveServicesCredentials(ocr_credentials["key1"]),
-        )
+        endpoint, key = _determine_endpoint_and_key(endpoint, key)
+        self.client = ComputerVisionClient(endpoint, CognitiveServicesCredentials(key))
 
     @requires_azure
     def _get_ocr_response(self, img: Image.Image):

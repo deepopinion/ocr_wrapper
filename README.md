@@ -35,3 +35,9 @@ The credentials for Google OCR will be obtained from one of the following:
 - The environment variable `GOOGLE_APPLICATION_CREDENTIALS`
 - A credentials file `~/.config/gcloud/credentials.json`
 - A credentials file `/credentials.json`
+
+### AzureOCR
+Credentials etc. for Azure OCR will be obtained from one of the following (in this order):
+- From the `endpoint` and `key` arguments when creating AzureOCR
+- From the environment variables `AZURE_OCR_ENDPOINT` and `AZURE_OCR_KEY`
+- From the credentials file `~/.config/azure/ocr_credentials.json` that contains the keys `endpoint` and `key`

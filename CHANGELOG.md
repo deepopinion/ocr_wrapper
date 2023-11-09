@@ -4,7 +4,7 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 
 ## Next Release
 ### Added
-
+- Extended the possibilities on how to provide endpoint and key for Azure OCR in addition to the `credentials.json`. Have a look at the README.md for details.
 ### Changed
 
 ### Fixed

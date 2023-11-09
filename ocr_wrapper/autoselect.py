@@ -1,0 +1,37 @@
+"""Implements functionality to automatically select the correct OCR engine"""
+
+import os
+
+from ocr_wrapper import AwsOCR, AzureOCR, EasyOCR, GoogleOCR, OcrWrapper, PaddleOCR
+
+
+class InvalidOcrProviderException(Exception):
+    """Raised when an invalid OCR provider is selected"""
+
+    pass
+
+
+name2engine = dict[str, type[OcrWrapper]](
+    google=GoogleOCR,
+    azure=AzureOCR,
+    aws=AwsOCR,
+    easy=EasyOCR,
+    paddle=PaddleOCR,
+    # For backwards compatibility
+    easyocr=EasyOCR,
+    paddleocr=PaddleOCR,
+)
+
+
+def autoselect_ocr_engine() -> type[OcrWrapper]:
+    """Automatically select the correct OCR engine based on the environment variable OCR_PROVIDER
+
+    Returns:
+        The OCR engine class (default if environment variable is not set: GoogleOCR)
+    """
+    provider = os.environ.get("OCR_PROVIDER", "google").lower()
+    provider_cls = name2engine.get(provider)
+    if provider_cls is None:
+        raise InvalidOcrProviderException(f"Invalid OCR provider {provider}. Select one of {name2engine.keys()}")
+
+    return provider_cls

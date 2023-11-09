@@ -1,10 +1,11 @@
+from .autoselect import autoselect_ocr_engine
 from .aws import AwsOCR
 from .azure import AzureOCR
-from .google_ocr import GoogleOCR
-from .paddleocr import PaddleOCR
-from .easy_ocr import EasyOCR
 from .bbox import BBox, draw_bboxes, get_label2color_dict
+from .easy_ocr import EasyOCR
+from .google_ocr import GoogleOCR
 from .ocr_wrapper import OcrWrapper
+from .paddleocr import PaddleOCR
 
 __all__ = [
     "AwsOCR",
@@ -15,5 +16,6 @@ __all__ = [
     "BBox",
     "draw_bboxes",
     "get_label2color_dict",
+    "autoselect_ocr_engine",
     "OcrWrapper",
 ]

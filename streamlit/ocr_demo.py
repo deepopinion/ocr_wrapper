@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 
-from ocr_wrapper import GoogleOCR, draw_bboxes
+from ocr_wrapper import GoogleOCR, AzureOCR, draw_bboxes
 from ocr_wrapper.compat import bboxs2dicts
 from pdf2image import convert_from_bytes
 from io import BytesIO
@@ -32,15 +32,18 @@ def resize_min(img: Image.Image, min_size: int) -> Image.Image:
 # Allow uploading of PDFs
 uploaded_file = st.file_uploader("Choose a file")
 
+# Select OCR engine
+ocr_engine = st.selectbox("Select OCR engine", ["Google", "Azure"])
+ocr_engine_class = {"Google": GoogleOCR, "Azure": AzureOCR}[ocr_engine]
+
 # Allow selection of whether to output ocr box order etc.
+do_profiling = st.checkbox("Profile", value=False)
 use_ocr_cache = st.checkbox("Use OCR Cache", value=True)
 auto_rotate = st.checkbox("Auto rotate image")
 output_order = st.checkbox("Output OCR box order")
 output_text = st.checkbox("Output OCR text")
 show_confidence = st.checkbox("Show confidence (low confidence is a darker blue)")
-ocr_samples: int = st.number_input(
-    "Number of OCR samples", min_value=1, max_value=10, value=2
-)
+ocr_samples: int = st.number_input("Number of OCR samples", min_value=1, max_value=10, value=2)
 
 if uploaded_file is not None:
     bytes_data = uploaded_file.getvalue()
@@ -51,17 +54,21 @@ if uploaded_file is not None:
     else:
         pages = [Image.open(filelike)]
 
-    ocr = GoogleOCR(
+    ocr = ocr_engine_class(
         ocr_samples=ocr_samples,
         cache_file="googlecache.gcache" if use_ocr_cache else None,
         auto_rotate=auto_rotate,
+        verbose=True,
     )
 
     for page in pages:
         # Start time measurement
         start = time.time()
 
-        with Profiler():
+        if do_profiling:
+            with Profiler():
+                bboxes, extras = ocr.ocr(page, return_extra=True)
+        else:
             bboxes, extras = ocr.ocr(page, return_extra=True)
 
         # End time measurement and print time (we only measure the OCR time, not the image loading time etc.)
@@ -83,9 +90,7 @@ if uploaded_file is not None:
 
         if show_confidence:
             # Normalize confidence to be between 0 and 1
-            cmin, cmax = min(bbox["confidence"] for bbox in bboxes), max(
-                bbox["confidence"] for bbox in bboxes
-            )
+            cmin, cmax = min(bbox["confidence"] for bbox in bboxes), max(bbox["confidence"] for bbox in bboxes)
             # fill_opacities = [1 - ((bbox["confidence"] - cmin) / (cmax - cmin)) for bbox in bboxes]
             fill_opacities = [1 - bbox["confidence"] for bbox in bboxes]
         else:
@@ -101,7 +106,7 @@ if uploaded_file is not None:
             fill_colors="blue",
             fill_opacities=fill_opacities,
             texts=texts,
-            fontsize=15,
+            fontsize=10,
         )
         st.image(img)
         st.markdown(f"Number of OCR boxes: {len(bboxes)}")

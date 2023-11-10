@@ -4,13 +4,19 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 
 ## Release v0.0.xx ()
 ### Added
-- Added a first version of tilt correction. **Note:** `torch` and `torchvision` are new required packages because of this.
+
 ### Changed
 
 ### Fixed
-- Fixed a bug introduced by a missing required positional argument in `autoselect_ocr_engine`
+
 ### Removed
 
+
+## Release v0.0.12 (2023-11-10)
+### Added
+- Added a first version of tilt correction. **Note:** `torch` and `torchvision` are new required packages because of this.
+### Fixed
+- Fixed a bug introduced by a missing required positional argument in `autoselect_ocr_engine`
 
 ## Release v0.0.11 (2023-11-09)
 ### Added

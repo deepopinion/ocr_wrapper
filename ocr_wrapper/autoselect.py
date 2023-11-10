@@ -1,4 +1,5 @@
 """Implements functionality to automatically select the correct OCR engine"""
+from __future__ import annotations
 
 import os
 from typing import Optional
@@ -24,7 +25,7 @@ name2engine = dict[str, type[OcrWrapper]](
 )
 
 
-def autoselect_ocr_engine(name: Optional[str]) -> type[OcrWrapper]:
+def autoselect_ocr_engine(name: Optional[str] = None) -> type[OcrWrapper]:
     """Automatically select the correct OCR engine based on the environment variable OCR_PROVIDER
 
     Returns:

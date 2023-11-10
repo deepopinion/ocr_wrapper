@@ -8,7 +8,7 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 ### Changed
 
 ### Fixed
-
+- Fixed a bug introduced by a missing required positional argument in `autoselect_ocr_engine`
 ### Removed
 
 

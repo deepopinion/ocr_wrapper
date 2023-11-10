@@ -13,6 +13,6 @@ setup(
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",
     ],
-    install_requires=["Pillow", "Shapely", "pdf2image", "rtree", "opencv-python-headless"],
+    install_requires=["Pillow", "Shapely", "pdf2image", "rtree", "opencv-python-headless", "torch", "torchvision"],
     zip_safe=False,
 )

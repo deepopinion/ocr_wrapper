@@ -4,7 +4,7 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 
 ## Release v0.0.xx ()
 ### Added
-
+- Added a first version of tilt correction. **Note:** `torch` and `torchvision` are new required packages because of this.
 ### Changed
 
 ### Fixed

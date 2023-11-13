@@ -38,12 +38,12 @@ ocr_engine_class = {"Google": GoogleOCR, "Azure": AzureOCR}[ocr_engine]
 
 # Allow selection of whether to output ocr box order etc.
 do_profiling = st.checkbox("Profile", value=False)
-use_ocr_cache = st.checkbox("Use OCR Cache", value=True)
+use_ocr_cache = st.checkbox("Use OCR Cache", value=False)
 auto_rotate = st.checkbox("Auto rotate image")
 output_order = st.checkbox("Output OCR box order")
 output_text = st.checkbox("Output OCR text")
 show_confidence = st.checkbox("Show confidence (low confidence is a darker blue)")
-ocr_samples: int = st.number_input("Number of OCR samples", min_value=1, max_value=10, value=2)
+ocr_samples = st.number_input("Number of OCR samples", min_value=1, max_value=10, value=2)
 
 if uploaded_file is not None:
     bytes_data = uploaded_file.getvalue()
@@ -77,7 +77,7 @@ if uploaded_file is not None:
 
         bboxes = bboxs2dicts(bboxes, extras["confidences"][0])
 
-        if auto_rotate:
+        if "rotated_image" in extras:
             page = extras["rotated_image"]
 
         if output_order:

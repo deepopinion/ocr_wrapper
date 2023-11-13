@@ -104,7 +104,7 @@ def get_word_and_language_codes(response):
     return word_and_language_codes
 
 
-def _get_words_bboxes_confidences(response):
+def _get_words_bboxes_confidences(response: vision.AnnotateImageResponse):
     """Given an ocr response, returns a list of tuples of word bounding boxes and confidences"""
     words, bboxes, confidences = [], [], []
 
@@ -165,7 +165,12 @@ class GoogleOCR(OcrWrapper):
         verbose: bool = False,
     ):
         super().__init__(
-            cache_file=cache_file, max_size=max_size, auto_rotate=auto_rotate, ocr_samples=ocr_samples, verbose=verbose
+            cache_file=cache_file,
+            max_size=max_size,
+            auto_rotate=auto_rotate,
+            ocr_samples=ocr_samples,
+            supports_multi_samples=True,
+            verbose=verbose,
         )
         # Get credentials from environment variable of the offered default locations
         if not os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
@@ -178,7 +183,7 @@ class GoogleOCR(OcrWrapper):
         self.client = vision.ImageAnnotatorClient(client_options={"api_endpoint": endpoint})
 
     @requires_gcloud
-    def _get_ocr_response(self, img: Image.Image):
+    def _get_ocr_response(self, img: Image.Image) -> vision.AnnotateImageResponse:
         """Gets the OCR response from the Google cloud. Uses cached response if a cache file has been specified and the
         document has been OCRed already"""
         # Pack image in correct format
@@ -203,7 +208,9 @@ class GoogleOCR(OcrWrapper):
         return response
 
     @requires_gcloud
-    def _convert_ocr_response(self, img, response) -> list[dict[str, Union[BBox, str, float]]]:
+    def _convert_ocr_response(
+        self, img: Image.Image, response: vision.AnnotateImageResponse
+    ) -> list[dict[str, Union[BBox, str, float]]]:
         """Converts the response given by Google OCR to a list of BBox"""
         # Iterate over all responses except the first. The first is for the whole document -> ignore
         words, bboxes, confidences = _get_words_bboxes_confidences(response)

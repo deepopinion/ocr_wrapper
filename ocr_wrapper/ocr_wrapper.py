@@ -44,6 +44,7 @@ class OcrWrapper(ABC):
         max_size: Optional[int] = 1024,
         auto_rotate: bool = False,
         ocr_samples: int = 2,
+        supports_multi_samples: bool = False,
         verbose: bool = False,
     ):
         if cache_file is None:
@@ -52,6 +53,7 @@ class OcrWrapper(ABC):
         self.max_size = max_size
         self.auto_rotate = auto_rotate
         self.ocr_samples = ocr_samples
+        self.supports_multi_samples = supports_multi_samples
         self.verbose = verbose
         self.extra = {}  # Extra information to be returned by ocr()
 
@@ -78,7 +80,13 @@ class OcrWrapper(ABC):
         if self.max_size is not None:
             img = self._resize_image(img, self.max_size)
         # Get response from an OCR engine
-        result = self._get_multi_response(img)
+        if self.ocr_samples == 1 or not self.supports_multi_samples:
+            if self.ocr_samples > 1 and self.verbose:
+                print("Warning: This OCR engine does not support multiple samples. Using only one sample.")
+            ocr = self._get_ocr_response(img)
+            result = self._convert_ocr_response(img, ocr)
+        else:
+            result = self._get_multi_response(img)
 
         if self.auto_rotate and "document_rotation" in self.extra:
             angle = self.extra["document_rotation"]

@@ -36,6 +36,13 @@ def ocr_with_auto_rotate():
     return GoogleOCR(auto_rotate=True, ocr_samples=2)
 
 
+@pytest.fixture
+def ocr_forced_single_response():
+    ocr = GoogleOCR(auto_rotate=True, ocr_samples=2)
+    ocr.supports_multi_samples = False
+    return ocr
+
+
 # Fixture for unrotated bboxes
 @pytest.fixture
 def unrotated_bboxes(ocr):
@@ -49,6 +56,21 @@ def test_google_ocr(ocr):
     text = " ".join([r["text"] for r in res])
     assert text == "This is a test ."
     assert all([r["bbox"].original_size == img.size for r in res])
+
+
+def test_google_ocr_forced_single_response(ocr_forced_single_response, mocker):
+    single_response_spy = mocker.spy(ocr_forced_single_response, "_get_ocr_response")
+    multi_response_spy = mocker.spy(ocr_forced_single_response, "_get_multi_response")
+
+    img_path = os.path.join(DATA_DIR, "ocr_test_big.png")
+    with Image.open(img_path) as img:
+        res = ocr_forced_single_response.ocr(img)
+        text = " ".join([r["text"] for r in res])
+        assert text == "This is a test ."
+        assert all([r["bbox"].original_size == img.size for r in res])
+
+        single_response_spy.assert_called_once()
+        multi_response_spy.assert_not_called()
 
 
 def test_google_orc_single_sample():

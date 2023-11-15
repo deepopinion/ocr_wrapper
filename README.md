@@ -39,6 +39,10 @@ Specific OCR engines may add other keys to return additional information about a
 
 To easily visualize bounding boxes, the library also offers the method `draw_bboxes`. See `tryme.ipynb` for a minimal code example.
 
+### Autoselect
+The function `autoselect_ocr_engine()` can be used to automatically return the class for the needed OCR engine, using the `OCR_PROVIDER` environment variable. `google`, `azure`, `aws`, `easy`, and `paddle` are valid settings. If no provider is explicitly set, Google OCR is chosen by default. 
+In case an invalid OCR provider is specified, an `InvalidOcrProviderException` will be raised.
+
 ### GoogleOCR
 The credentials for Google OCR will be obtained from one of the following sources, in this order:
 - The environment variable `GOOGLE_APPLICATION_CREDENTIALS`

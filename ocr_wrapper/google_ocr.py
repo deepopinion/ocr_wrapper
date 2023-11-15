@@ -161,13 +161,15 @@ class GoogleOCR(OcrWrapper):
         max_size: Optional[int] = None,
         endpoint: Optional[str] = "eu-vision.googleapis.com",
         auto_rotate: bool = False,
-        ocr_samples: int = 1,
+        correct_tilt: bool = True,
+        ocr_samples: int = 2,
         verbose: bool = False,
     ):
         super().__init__(
             cache_file=cache_file,
             max_size=max_size,
             auto_rotate=auto_rotate,
+            correct_tilt=correct_tilt,
             ocr_samples=ocr_samples,
             supports_multi_samples=True,
             verbose=verbose,

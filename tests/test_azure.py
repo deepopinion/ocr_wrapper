@@ -69,6 +69,18 @@ def test_azure_ocr_single_sample():
         assert "confidence" in r
 
 
+@pytest.mark.parametrize("rotation_angle", [0.5, -2.2, 3.5])
+@pytest.mark.parametrize("ocr_system", ["ocr", "ocr_with_auto_rotate"])
+def test_tilt_correction(rotation_angle, ocr_system, request):
+    ocr = request.getfixturevalue(
+        ocr_system
+    )  # Get the fixture by name (has to be done this way because the fixture is parametrized)
+    with Image.open(os.path.join(DATA_DIR, "ocr_samples.png")) as img:
+        rot_img = img.rotate(rotation_angle, expand=True, fillcolor="white")
+        _, extra = ocr.ocr(rot_img, return_extra=True)
+        assert extra["tilt_angle"] == pytest.approx(rotation_angle, abs=0.01)
+
+
 @pytest.mark.parametrize("filename, rotation", rotation_test_documents)
 def test_azure_ocr_rotation(ocr, filename, rotation):
     """Check that the rotation angle is correctly detected"""

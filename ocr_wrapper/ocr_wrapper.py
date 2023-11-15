@@ -13,6 +13,7 @@ from PIL import Image, ImageDraw, ImageOps
 
 from .aggregate_multiple_responses import aggregate_ocr_samples, generate_img_sample
 from .bbox import BBox
+from .tilt_correction import correct_tilt
 
 
 def rotate_image(image: Image.Image, angle: int) -> Image.Image:
@@ -42,7 +43,8 @@ class OcrWrapper(ABC):
         *,
         cache_file: Optional[str] = None,
         max_size: Optional[int] = 1024,
-        auto_rotate: bool = False,
+        auto_rotate: bool = False,  # Compensate for multiples of 90deg rotation (after OCR using OCR info)
+        correct_tilt: bool = True,  # Compensate for small rotations (purely based on image content)
         ocr_samples: int = 2,
         supports_multi_samples: bool = False,
         verbose: bool = False,
@@ -52,6 +54,7 @@ class OcrWrapper(ABC):
         self.cache_file = cache_file
         self.max_size = max_size
         self.auto_rotate = auto_rotate
+        self.correct_tilt = correct_tilt
         self.ocr_samples = ocr_samples
         self.supports_multi_samples = supports_multi_samples
         self.verbose = verbose
@@ -74,8 +77,14 @@ class OcrWrapper(ABC):
             If ``return_extra`` is True, returns a tuple with the usual return list, and a dict containing extra
             information about the whole document (e.g. rotaion angle) given by the OCR engine.
         """
-        # Keep copy of original image
-        original_img = img.copy()
+        # Correct tilt (i.e. small rotation)
+        if self.correct_tilt:
+            img, tilt_angle = correct_tilt(img)
+            self.extra["rotated_image"] = img
+            self.extra["tilt_angle"] = tilt_angle
+
+        # Keep copy of the image in its full size
+        full_size_img = img.copy()
         # Resize image if needed. If the image is smaller than max_size, it will be returned as is
         if self.max_size is not None:
             img = self._resize_image(img, self.max_size)
@@ -91,7 +100,7 @@ class OcrWrapper(ABC):
         if self.auto_rotate and "document_rotation" in self.extra:
             angle = self.extra["document_rotation"]
             # Rotate image
-            self.extra["rotated_image"] = rotate_image(original_img, angle)
+            self.extra["rotated_image"] = rotate_image(full_size_img, angle)
             new_size = self.extra["rotated_image"].size
             # Rotate boxes. The given rotation will be done counter-clockwise
             for r in result:

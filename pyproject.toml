@@ -12,6 +12,8 @@ dependencies = [
     "shapely",
     "rtree",                  # Needed to speed up integration of multiple OCR passes
     "opencv-python-headless",   # Needed for denoising when doing multiple OCR passes
+    "torch",
+    "torchvision",
 ]
 
 classifiers = [

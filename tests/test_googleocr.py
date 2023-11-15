@@ -26,21 +26,21 @@ rotation_test_documents = [
 ]
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def ocr():
     return GoogleOCR(ocr_samples=2)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def ocr_with_auto_rotate():
     return GoogleOCR(auto_rotate=True, ocr_samples=2)
 
 
-@pytest.fixture
-def ocr_forced_single_response():
-    ocr = GoogleOCR(auto_rotate=True, ocr_samples=2)
+@pytest.fixture()
+def ocr_forced_single_response(ocr):
     ocr.supports_multi_samples = False
-    return ocr
+    yield ocr
+    ocr.supports_multi_samples = True
 
 
 # Fixture for unrotated bboxes
@@ -52,10 +52,10 @@ def unrotated_bboxes(ocr):
 
 def test_google_ocr(ocr):
     img = Image.open(os.path.join(DATA_DIR, "ocr_test_big.png"))
-    res = ocr.ocr(img)
+    res, extra = ocr.ocr(img, return_extra=True)
     text = " ".join([r["text"] for r in res])
     assert text == "This is a test ."
-    assert all([r["bbox"].original_size == img.size for r in res])
+    assert all([r["bbox"].original_size == extra["rotated_image"].size for r in res])
 
 
 def test_google_ocr_forced_single_response(ocr_forced_single_response, mocker):
@@ -64,22 +64,34 @@ def test_google_ocr_forced_single_response(ocr_forced_single_response, mocker):
 
     img_path = os.path.join(DATA_DIR, "ocr_test_big.png")
     with Image.open(img_path) as img:
-        res = ocr_forced_single_response.ocr(img)
+        res, extra = ocr_forced_single_response.ocr(img, return_extra=True)
         text = " ".join([r["text"] for r in res])
         assert text == "This is a test ."
-        assert all([r["bbox"].original_size == img.size for r in res])
+        assert all([r["bbox"].original_size == extra["rotated_image"].size for r in res])
 
-        single_response_spy.assert_called_once()
         multi_response_spy.assert_not_called()
+        single_response_spy.assert_called_once()
 
 
 def test_google_orc_single_sample():
     img = Image.open(os.path.join(DATA_DIR, "ocr_test_big.png"))
     ocr = GoogleOCR(auto_rotate=True, ocr_samples=1)
-    res = ocr.ocr(img)
+    res, extra = ocr.ocr(img, return_extra=True)
     text = " ".join([r["text"] for r in res])
     assert text == "This is a test ."
-    assert all([r["bbox"].original_size == img.size for r in res])
+    assert all([r["bbox"].original_size == extra["rotated_image"].size for r in res])
+
+
+@pytest.mark.parametrize("rotation_angle", [0.5, -2.2, 3.5])
+@pytest.mark.parametrize("ocr_system", ["ocr", "ocr_with_auto_rotate"])
+def test_tilt_correction(rotation_angle, ocr_system, request):
+    ocr = request.getfixturevalue(
+        ocr_system
+    )  # Get the fixture by name (has to be done this way because the fixture is parametrized)
+    with Image.open(os.path.join(DATA_DIR, "ocr_samples.png")) as img:
+        rot_img = img.rotate(rotation_angle, expand=True, fillcolor="white")
+        _, extra = ocr.ocr(rot_img, return_extra=True)
+        assert extra["tilt_angle"] == pytest.approx(rotation_angle, abs=0.01)
 
 
 @pytest.mark.parametrize("filename, rotation", rotation_test_documents)

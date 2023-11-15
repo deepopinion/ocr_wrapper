@@ -14,6 +14,7 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 - Adds forced conversion to RGB in pillow before sending data to OpenCV to fix a possible bug in Studio
 - Fixes a rare bug where self-intersecting bounding boxes caused the OCR system to crash when using multi-pass OCR
 - Fixed a problem whene trying to use multi-pass with OCR engines that don't support it yet. Now the system will return a warning message and use the single-pass option instead. (Currently only GoogleOCR is supported for multi-pass)
+- Brings AzureOCR to a fully working state again. It has full functionality, with the exception for multi-pass OCR (which might not be needed for Azure though)
 ### Removed
 
 

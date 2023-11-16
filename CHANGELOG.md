@@ -2,13 +2,13 @@
 The version numbers are according to [Semantic Versioning](http://semver.org/).
 (Versions prior to v1.0.0 might not strictly follow semantic versioning)
 
-## Release v1.1.0  (2023-??-??)
+## Next Release
 ### Added
 - Added the output of confidence scores to GoogleOCR
 - Added multiple OCR passes to improve OCR reliability
 - Added an environment variable `OCR_WRAPPER_CACHE_FILE` to specify an ocr cache file globally
 - Added an `autoselect_ocr_engine` function that selects the correct engine depending on the `OCR_PROVIDER` environment variable
-- Added a first version of tilt correction. **Note:** `torch` and `torchvision` are new required packages because of this.
+- Added tilt correction. **Note:** `torch` and `torchvision` are new required packages because of this.
 ### Changed
 - Changed GoogleOCR to use WebP instead of PNG to transfer images to the cloud (reduces amount of transferred data by ~ 1/2)
 ### Fixed

@@ -2,15 +2,19 @@
 The version numbers are according to [Semantic Versioning](http://semver.org/).
 (Versions prior to v1.0.0 might not strictly follow semantic versioning)
 
-## Release v0.0.xx ()
+## Next Release
 ### Added
 
 ### Changed
-- Improved tilt correction to also support documents like passports
+
 ### Fixed
 
 ### Removed
 
+
+## Release v0.0.13 (2023-11-16)
+### Changed
+- Improved tilt correction to also support documents like passports
 
 ## Release v0.0.12 (2023-11-10)
 ### Added

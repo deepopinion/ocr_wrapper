@@ -6,7 +6,7 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 ### Added
 
 ### Changed
-
+- Improved tilt correction to also support documents like passports
 ### Fixed
 
 ### Removed

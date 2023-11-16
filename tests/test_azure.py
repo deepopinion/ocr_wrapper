@@ -1,10 +1,11 @@
-import os
-from PIL import Image
-from ocr_wrapper import AzureOCR
-from ocr_wrapper.azure import _discretize_angle_to_90_deg, _determine_endpoint_and_key
-import pytest
-from unittest.mock import mock_open
 import json
+import os
+from unittest.mock import mock_open
+
+import pytest
+from ocr_wrapper import AzureOCR
+from ocr_wrapper.azure import _determine_endpoint_and_key, _discretize_angle_to_90_deg
+from PIL import Image
 
 filedir = os.path.dirname(__file__)
 DATA_DIR = os.path.join(filedir, "data")
@@ -63,6 +64,18 @@ def test_azure_ocr_single_sample():
     text = " ".join([str(r.text) for r in res])
     assert text == "This is a test."
     assert len(extra["confidences"][0]) == len(res)
+
+
+@pytest.mark.parametrize("rotation_angle", [0.5, -2.2, 3.5, -9.5])
+@pytest.mark.parametrize("ocr_system", ["ocr", "ocr_with_auto_rotate"])
+def test_tilt_correction(rotation_angle, ocr_system, request):
+    ocr = request.getfixturevalue(
+        ocr_system
+    )  # Get the fixture by name (has to be done this way because the fixture is parametrized)
+    with Image.open(os.path.join(DATA_DIR, "ocr_samples.png")) as img:
+        rot_img = img.rotate(rotation_angle, expand=True, fillcolor="white")
+        _, extra = ocr.ocr(rot_img, return_extra=True)
+        assert extra["tilt_angle"] == pytest.approx(rotation_angle, abs=0.01)
 
 
 @pytest.mark.parametrize("filename, rotation", rotation_test_documents)

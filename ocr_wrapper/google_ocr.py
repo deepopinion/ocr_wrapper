@@ -203,7 +203,7 @@ class GoogleOCR(OcrWrapper):
         img_bytes = self._pil_img_to_compressed(img, compression="webp")
         vision_img = vision.Image(content=img_bytes)
 
-        response = self._get_from_shelf(img)  # Try to get cached response
+        response = self._get_from_shelf(img_bytes)  # Try to get cached response
         if response is None:  # Not cached, get response from Google
             # If something goes wrong during GoogleOCR, we also try to repeat before failing. This sometimes happens when the
             # client loses connection
@@ -217,7 +217,7 @@ class GoogleOCR(OcrWrapper):
                         raise
                     nb_repeats -= 1
                     sleep(1.0)
-            self._put_on_shelf(img, response)
+            self._put_on_shelf(img_bytes, response)
         return response
 
     @requires_gcloud

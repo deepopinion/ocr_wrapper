@@ -52,13 +52,14 @@ class PaddleOCR(OcrWrapper):
     @requires_paddle
     def _get_ocr_response(self, img: Image.Image):
         # Try to get cached response
-        response = self._get_from_shelf(img)
+        img_bytes = img.tobytes()
+        response = self._get_from_shelf(img_bytes)
         if response is None:
             # If that fails (no cache file, not yet cached, ...), get response from Google OCR
             resized_img, resize_ratio = self._resize(img)
             paddle_resp = self.client.ocr(np.asarray(resized_img))
             response = (paddle_resp, resize_ratio)
-            self._put_on_shelf(img, response)
+            self._put_on_shelf(img_bytes, response)
         return response
 
     @requires_paddle

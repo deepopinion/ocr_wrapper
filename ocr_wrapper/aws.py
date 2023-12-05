@@ -37,11 +37,11 @@ class AwsOCR(OcrWrapper):
         img_bytes = self._pil_img_to_compressed(img)
 
         # Try to get cached response
-        response = self._get_from_shelf(img)
+        response = self._get_from_shelf(img_bytes)
         if response is None:
             # If that fails (no cache file, not yet cached, ...), get response from AWS
             response = self.client.detect_document_text(Document={"Bytes": img_bytes})
-            self._put_on_shelf(img, response)
+            self._put_on_shelf(img_bytes, response)
         return response
 
     @requires_boto

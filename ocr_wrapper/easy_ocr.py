@@ -55,10 +55,11 @@ class EasyOCR(OcrWrapper):
         """Gets the OCR response from EasyOCR. Uses a cached response if a cache file has been specified and the
         document has been OCRed already"""
         # Pack image in correct format
-        response = self._get_from_shelf(img)  # Try to get cached response
+        img_bytes = img.tobytes()
+        response = self._get_from_shelf(img_bytes)  # Try to get cached response
         if response is None:  # Not cached, get response from Google
             response = self.client.readtext(np.array(img), width_ths=self.width_thr)
-            self._put_on_shelf(img, response)
+            self._put_on_shelf(img_bytes, response)
         return response
 
     @requires_easyocr

@@ -95,7 +95,7 @@ class AzureOCR(OcrWrapper):
         img_stream = BytesIO(img_bytes)
 
         # Try to get cached response
-        read_result = self._get_from_shelf(img)
+        read_result = self._get_from_shelf(img_bytes)
         if read_result is None:
             # If that fails (no cache file, not yet cached, ...), get response from Azure
             read_response = self.client.read_in_stream(img_stream, raw=True)
@@ -109,7 +109,7 @@ class AzureOCR(OcrWrapper):
                 time.sleep(0.1)
             if read_result.status != OperationStatusCodes.succeeded:
                 raise Exception("Azure operation returned error")
-            self._put_on_shelf(img, read_result)
+            self._put_on_shelf(img_bytes, read_result)
         return read_result
 
     @requires_azure

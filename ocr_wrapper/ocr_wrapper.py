@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from hashlib import sha256
 from io import BytesIO
 from threading import Lock
-from typing import Optional, Union
+from typing import Any, Optional, Union
 
 from PIL import Image, ImageDraw, ImageOps
 
@@ -60,7 +60,6 @@ class OcrWrapper(ABC):
         self.ocr_samples = ocr_samples
         self.supports_multi_samples = supports_multi_samples
         self.verbose = verbose
-        self.extra = {}  # Extra information to be returned by ocr()
         self.shelve_mutex = Lock()  # Mutex to ensure that only one thread is writing to the cache file at a time
 
     def ocr(self, img: Image.Image, return_extra: bool = False) -> Union[list[BBox], tuple[list[BBox], dict]]:
@@ -70,17 +69,13 @@ class OcrWrapper(ABC):
             img: Image to be processed
             return_extra: If True, returns a tuple of (bboxes, extra) where extra is a dict containing extra information
         """
-        self.extra = {}
-        # We have to initialize a few lists here because the parallel executing threads need to be able to write
-        # to specific positions directly
-        self.extra["confidences"] = [[] for _ in range(self.ocr_samples)]
-        self.extra["img_samples"] = [[] for _ in range(self.ocr_samples)]
+        extra = {}
 
         # Correct tilt (i.e. small rotation)
         if self.correct_tilt:
             img, tilt_angle = correct_tilt(img)
-            self.extra["rotated_image"] = img
-            self.extra["tilt_angle"] = tilt_angle
+            extra["rotated_image"] = img
+            extra["tilt_angle"] = tilt_angle
 
         # Keep copy of the image in its full size
         full_size_img = img.copy()
@@ -93,64 +88,70 @@ class OcrWrapper(ABC):
             if self.ocr_samples > 1 and self.verbose:
                 print("Warning: This OCR engine does not support multiple samples. Using only one sample.")
             ocr = self._get_ocr_response(img)
-            bboxes = self._convert_ocr_response(ocr)
+            bboxes, sample_extra = self._convert_ocr_response(ocr)
             # Normalize all boxes
             width, height = img.size
             bboxes = [bbox.to_normalized(img_width=width, img_height=height) for bbox in bboxes]
         else:
-            bboxes = self._get_multi_response(img)
+            bboxes, sample_extra = self._get_multi_response(img)
+        extra.update(sample_extra)
 
-        if self.auto_rotate and "document_rotation" in self.extra:
-            angle = self.extra["document_rotation"]
+        if self.auto_rotate and "document_rotation" in extra:
+            angle = extra["document_rotation"]
             # Rotate image
-            self.extra["rotated_image"] = rotate_image(full_size_img, angle)
+            extra["rotated_image"] = rotate_image(full_size_img, angle)
             # Rotate boxes. The given rotation will be done counter-clockwise
             bboxes = [bbox.rotate(angle) for bbox in bboxes]
 
         if return_extra:
-            return bboxes, self.extra
+            return bboxes, extra
         return bboxes
 
-    def _get_multi_response(self, img: Image.Image) -> list:
+    def _get_multi_response(self, img: Image.Image) -> tuple[list[BBox], dict[str, Any]]:
         """Get OCR response from multiple samples of the same image.
 
         The processing of the individual samples is done in parallel (using threads).
         This does not run on multiple cores, but it is mitigating the latency of calling
         the external OCR engine multiple times.
         """
-        responses = [[] for _ in range(self.ocr_samples)]
+        responses: list[tuple[list[BBox], dict[str, Any]] | None] = [None] * self.ocr_samples
 
         # Get individual OCR responses in parallel
-        def process_sample(i):
+        def process_sample(i: int):
             img_sample = generate_img_sample(img, i)
-            self.extra["img_samples"][i] = img_sample
+            extra = {"img_samples": img_sample}
             response = self._get_ocr_response(img_sample)
-            result = self._convert_ocr_response(response, sample_nr=i)
+            result, sample_extra = self._convert_ocr_response(response, sample_nr=i)
+            extra.update(sample_extra)
 
             # Normalize boxes
             width, height = img_sample.size
             result = [bbox.to_normalized(img_width=width, img_height=height) for bbox in result]
-            return result, i
+            return result, extra, i
 
         with ThreadPoolExecutor() as executor:
             futures = {executor.submit(process_sample, i) for i in range(self.ocr_samples)}
 
             for future in as_completed(futures):
-                response, i = future.result()
-                responses[i] = response
+                response, extra, i = future.result()
+                responses[i] = (response, extra)
 
         # Convert to new format as dicts
         new_format_responses = []
-        for response, confidence in zip(responses, self.extra["confidences"]):
-            new_format_response = bboxs2dicts(response, confidence)
+        extra = {"img_samples": []}
+        assert all(r is not None for r in responses)  # All responses should be filled
+        for response, sample_extra in responses:
+            new_format_response = bboxs2dicts(response, sample_extra.pop("confidences"))
             new_format_responses.append(new_format_response)
+            extra["img_samples"].append(sample_extra.pop("img_samples"))
+            extra.update(sample_extra)  # Overwrite extra with the last sample's remaining extra keys
 
         response = aggregate_ocr_samples(new_format_responses, img.size)
 
         # Convert back to old format
         response_old_format, new_confidences = dicts2bboxs(response)
-        self.extra["confidences"] = [new_confidences]
-        return response_old_format
+        extra["confidences"] = new_confidences
+        return response_old_format, extra
 
     @staticmethod
     def _resize_image(img: Image.Image, max_size: int) -> Image.Image:
@@ -171,7 +172,7 @@ class OcrWrapper(ABC):
         pass
 
     @abstractmethod
-    def _convert_ocr_response(self, response, *, sample_nr: int = 0) -> list[BBox]:
+    def _convert_ocr_response(self, response, *, sample_nr: int = 0) -> tuple[list[BBox], dict[str, Any]]:
         pass
 
     @staticmethod
@@ -224,7 +225,7 @@ class OcrWrapper(ABC):
                                 print(f"Using cached results for hash {img_hash}")
                             return db[img_hash]
                 except dbm.error:
-                    pass # db could not be opened
+                    pass  # db could not be opened
 
     def _put_on_shelf(self, img_bytes: bytes, response):
         if self.cache_file is not None:

@@ -3,7 +3,7 @@ import os
 import json
 import time
 from io import BytesIO
-from typing import Optional, List
+from typing import Any, Optional, List
 
 from PIL import Image
 from .bbox import BBox
@@ -113,10 +113,11 @@ class AzureOCR(OcrWrapper):
         return read_result
 
     @requires_azure
-    def _convert_ocr_response(self, response, *, sample_nr: int = 0) -> List[BBox]:
+    def _convert_ocr_response(self, response, *, sample_nr: int = 0) -> tuple[List[BBox], dict[str, Any]]:
         """Converts the response given by Azure Read to a list of BBox"""
         bboxes = []
         confidences = []
+        extra = {}
 
         # Iterate over all responses
         for annotation in response.analyze_result.read_results:
@@ -126,10 +127,10 @@ class AzureOCR(OcrWrapper):
                     bboxes.append(bbox)
                     confidences.append(word.confidence)
 
-        self.extra["confidences"][sample_nr] = confidences
+        extra["confidences"] = confidences
 
         # Determine rotation of document
         page_rotation = response.analyze_result.read_results[0].angle
-        self.extra["document_rotation"] = _discretize_angle_to_90_deg(page_rotation)
+        extra["document_rotation"] = _discretize_angle_to_90_deg(page_rotation)
 
-        return bboxes
+        return bboxes, extra

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import functools
-from typing import List, Optional, Union
+from typing import Any, List, Optional, Union
 
 import numpy as np
 from PIL import Image
@@ -63,7 +63,7 @@ class EasyOCR(OcrWrapper):
         return response
 
     @requires_easyocr
-    def _convert_ocr_response(self, response, *, sample_nr: int = 0) -> List[BBox]:
+    def _convert_ocr_response(self, response, *, sample_nr: int = 0) -> tuple[List[BBox], dict[str, Any]]:
         """Converts the response given by EasyOCR to a list of BBox"""
         bboxes, confidences = [], []
         # Iterate over all responses except the first. The first is for the whole document -> ignore
@@ -73,8 +73,5 @@ class EasyOCR(OcrWrapper):
             bboxes.append(bbox)
             confidences.append(score)
 
-        try:
-            self.extra["confidences"][sample_nr] = confidences
-        except KeyError:
-            self.extra["confidences"] = confidences  # not using multipass
-        return bboxes
+        extra = {"confidences": confidences}
+        return bboxes, extra

@@ -118,7 +118,7 @@ class OcrWrapper(ABC):
 
         # Get individual OCR responses in parallel
         def process_sample(i: int):
-            img_sample = generate_img_sample(img, i)
+            img_sample = generate_img_sample(img, i, denoise=False)
             extra = {"img_samples": img_sample}
             response = self._get_ocr_response(img_sample)
             result, sample_extra = self._convert_ocr_response(response, sample_nr=i)
@@ -129,7 +129,7 @@ class OcrWrapper(ABC):
             result = [bbox.to_normalized(img_width=width, img_height=height) for bbox in result]
             return result, extra, i
 
-        with ThreadPoolExecutor() as executor:
+        with ThreadPoolExecutor(max_workers=self.ocr_samples) as executor:
             futures = {executor.submit(process_sample, i) for i in range(self.ocr_samples)}
 
             for future in as_completed(futures):

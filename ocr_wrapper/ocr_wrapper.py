@@ -62,7 +62,9 @@ class OcrWrapper(ABC):
         self.verbose = verbose
         self.shelve_mutex = Lock()  # Mutex to ensure that only one thread is writing to the cache file at a time
 
-    def ocr(self, img: Image.Image, return_extra: bool = False) -> Union[list[BBox], tuple[list[BBox], dict]]:
+    def ocr(
+        self, img: Image.Image, return_extra: bool = False, denoise: bool = True
+    ) -> Union[list[BBox], tuple[list[BBox], dict]]:
         """Returns OCR result as a list of normalized BBox
 
         Args:
@@ -93,7 +95,7 @@ class OcrWrapper(ABC):
             width, height = img.size
             bboxes = [bbox.to_normalized(img_width=width, img_height=height) for bbox in bboxes]
         else:
-            bboxes, sample_extra = self._get_multi_response(img)
+            bboxes, sample_extra = self._get_multi_response(img, denoise=denoise)
         extra.update(sample_extra)
 
         if self.auto_rotate and "document_rotation" in extra:
@@ -107,7 +109,7 @@ class OcrWrapper(ABC):
             return bboxes, extra
         return bboxes
 
-    def _get_multi_response(self, img: Image.Image) -> tuple[list[BBox], dict[str, Any]]:
+    def _get_multi_response(self, img: Image.Image, denoise: bool) -> tuple[list[BBox], dict[str, Any]]:
         """Get OCR response from multiple samples of the same image.
 
         The processing of the individual samples is done in parallel (using threads).
@@ -118,7 +120,7 @@ class OcrWrapper(ABC):
 
         # Get individual OCR responses in parallel
         def process_sample(i: int):
-            img_sample = generate_img_sample(img, i, denoise=False)
+            img_sample = generate_img_sample(img, i, denoise=denoise)
             extra = {"img_samples": img_sample}
             response = self._get_ocr_response(img_sample)
             result, sample_extra = self._convert_ocr_response(response, sample_nr=i)

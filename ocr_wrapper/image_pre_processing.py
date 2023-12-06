@@ -9,16 +9,14 @@ from PIL import Image
 
 def _pillow_to_opencv(pillow_image: Image.Image):
     """Convert the Pillow image to OpenCV format (numpy array)"""
-    pillow_image = pillow_image.convert("RGB")
+    pillow_image = pillow_image.convert("L")
     cv_image = np.array(pillow_image)
-    cv_image = cv2.cvtColor(cv_image, cv2.COLOR_RGB2BGR)
     return cv_image
 
 
 def _opencv_to_pillow(cv_image) -> Image.Image:
     """Convert the OpenCV image to Pillow format"""
-    cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
-    pillow_image = Image.fromarray(cv_image)
+    pillow_image = Image.fromarray(cv_image, mode="L")
     return pillow_image
 
 
@@ -56,6 +54,6 @@ def denoise_image_for_ocr(image):
     # templateWindowSize : Size in pixels of the template patch that is used to compute weights. Should be odd. Recommended value 7 pixels
     # searchWindowSize : Size in pixels of the window that is used to compute weighted average for given pixel.
     #     Should be odd. Affect performance linearly: greater searchWindowsSize - greater denoising time. Recommended value 21 pixels
-    denoised = cv2.fastNlMeansDenoisingColored(image, None, h=10, hColor=10, templateWindowSize=7, searchWindowSize=21)
+    denoised = cv2.fastNlMeansDenoising(image, None, h=10, templateWindowSize=7, searchWindowSize=21)
 
     return denoised

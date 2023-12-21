@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 
-from ocr_wrapper import GoogleOCR, AzureOCR, draw_bboxes
+from ocr_wrapper import GoogleOCR, AzureOCR, GoogleAzureOCR, draw_bboxes
 from ocr_wrapper.compat import bboxs2dicts
 from pdf2image import convert_from_bytes
 from io import BytesIO
@@ -42,9 +42,9 @@ do_profiling = st.checkbox("Run Profiler", value=False)
 st.divider()
 
 st.markdown("#### OCR Settings")
-ocr_engine = st.selectbox("Select OCR engine", ["Google", "Azure"])
+ocr_engine = st.selectbox("Select OCR engine", ["Google", "Azure", "GoogleAzure"])
 assert ocr_engine is not None
-ocr_engine_class = {"Google": GoogleOCR, "Azure": AzureOCR}[ocr_engine]
+ocr_engine_class = {"Google": GoogleOCR, "Azure": AzureOCR, "GoogleAzure": GoogleAzureOCR}[ocr_engine]
 
 use_ocr_cache = st.checkbox("Use OCR Cache", value=False)
 auto_rotate = st.checkbox("Auto rotate image", value=True)

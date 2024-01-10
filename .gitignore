@@ -7,3 +7,6 @@ venv/
 *.egg-info
 build
 /.hypothesis/
+
+imgs/
+imgs_comparison/

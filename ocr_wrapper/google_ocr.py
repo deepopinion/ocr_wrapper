@@ -158,7 +158,7 @@ class GoogleOCR(OcrWrapper):
         self,
         *,
         cache_file: Optional[str] = None,
-        max_size: Optional[int] = None,
+        max_size: Optional[int] = 1024,
         endpoint: Optional[str] = "eu-vision.googleapis.com",
         auto_rotate: bool = False,
         correct_tilt: bool = True,

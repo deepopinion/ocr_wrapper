@@ -12,6 +12,7 @@ from uuid import uuid4
 from PIL import Image, ImageColor, ImageDraw, ImageFont
 from shapely import affinity
 from shapely.geometry import Polygon
+from shapely.errors import GEOSException
 
 
 def get_color_with_defined_brightness(color, goal_brightness=0.5):
@@ -528,11 +529,14 @@ class BBox:
     def intersection_area_percent(self, that: "BBox") -> float:
         """Returns the area of the intersection of this bbox with that bbox as a proportion of the area of this bbox.
 
-        i.e. max is 1.0, min is 0.0
+        i.e. max is 1.0, min is 0.0. If one of the boxes is self-intersecting, 0.0 is returned.
         """
         self_poly = self.get_shapely_polygon()
         that_poly = that.get_shapely_polygon()
-        inter_poly = self_poly.intersection(that_poly)
+        try:
+            inter_poly = self_poly.intersection(that_poly)
+        except GEOSException:
+            return 0.0
         return inter_poly.area / self_poly.area
 
     def get_augmented(self, max_augment: float) -> "BBox":

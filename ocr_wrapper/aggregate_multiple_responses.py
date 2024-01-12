@@ -37,6 +37,8 @@ def _group_overlapping_bboxes(bboxes: list[dict], threshold: float) -> list[list
     """
     Group the bounding boxes that have an overlap greater than the given threshold.
 
+    WARNING: There is some special behaviour here that is specific for the use case of aggregating multiple OCR responses. A more general grouping function can be found in bbox_utils.py
+
     Args:
         bboxes: The dictionaries containing the bounding boxes and other information.
         threshold (float): The threshold for the percentage of overlap.

@@ -25,7 +25,7 @@ def whiten_image(img: Image.Image, amount: float) -> Image.Image:
 
 def resize_min(img: Image.Image, min_size: int) -> Image.Image:
     """Resizes an image so that the smallest dimension is at least min_size"""
-    if min(img.size) < min_size:
+    if min(img.size) > min_size:
         return img
     w, h = img.size
     if w < h:
@@ -92,73 +92,151 @@ if uploaded_file is not None:
         verbose=True,
     )
 
-    for page in pages:
-        # Start time measurement
-        start = time.time()
+    col1, col2 = st.columns(2)
+    with col1:
+        for page in pages:
+            # Start time measurement
+            start = time.time()
 
-        if do_profiling:
-            with Profiler():
-                bboxes, extras = ocr.ocr(page, return_extra=True)
-        else:
-            bboxes, extras = ocr.ocr(page, return_extra=True)
-
-        # End time measurement and print time (we only measure the OCR time, not the image loading time etc.)
-        end = time.time()
-        st.write("Time taken for OCR: ", end - start, "seconds")
-
-        bboxes = bboxs2dicts(bboxes, extras["confidences"][0])
-
-        # Filter bboxes by confidence
-        bboxes = [bbox for bbox in bboxes if bbox["confidence"] > confidence_threshold]
-
-        if "rotated_image" in extras:
-            page = extras["rotated_image"]
-            st.write("Detected tilt angle:", extras["tilt_angle"])
-
-        if output_order:
-            texts = [str(i) for i in list(range(len(bboxes)))]
-        else:
-            texts = ["" for _ in bboxes]
-
-        if output_text_in_image:
-            texts = [t + " " + b["text"] for t, b in zip(texts, bboxes)]
-
-        if confidence_text:
-            texts = [t + " " + str(round(b["confidence"], 2)) for t, b in zip(texts, bboxes)]
-
-        if show_confidence:
-            # Normalize confidence to be between 0 and 1
-            if len(bboxes) == 0:
-                cmin, cmax = 0.0, 1.0
+            if do_profiling:
+                with Profiler():
+                    bboxes, extras = ocr.ocr(page, return_extra=True)
             else:
-                cmin, cmax = min(bbox["confidence"] for bbox in bboxes), max(bbox["confidence"] for bbox in bboxes)
-            fill_opacities = [1 - bbox["confidence"] for bbox in bboxes]
-        else:
-            fill_opacities = 0.2
+                bboxes, extras = ocr.ocr(page, return_extra=True)
 
-        img = resize_min(page, 2048)
+            # End time measurement and print time (we only measure the OCR time, not the image loading time etc.)
+            end = time.time()
+            st.write("Time taken for OCR: ", end - start, "seconds")
 
-        img = draw_bboxes(
-            img=img,
-            bboxes=[bbox["bbox"] for bbox in bboxes],
-            strokewidths=0,  # Could also be a list for each bbox
-            colors="blue",
-            fill_colors="blue",
-            fill_opacities=fill_opacities,
-            texts=texts,
-            fontsize=font_size,
-        )
-        if allow_big_images:
-            st.image(img, width=img.size[0])
-        else:
-            st.image(img)
+            bboxes = bboxs2dicts(bboxes, extras["confidences"][0])
 
-        if output_ocr_text:
-            st.write("OCR Text:", " ".join([bbox["text"] for bbox in bboxes]))
-        if "img_samples" in extras:
-            st.markdown("### Image samples")
-            for img_sample in extras["img_samples"]:
-                if allow_big_images:
-                    st.image(img_sample, width=img_sample.size[0])
+            # Filter bboxes by confidence
+            bboxes = [bbox for bbox in bboxes if bbox["confidence"] > confidence_threshold]
+
+            if "rotated_image" in extras:
+                page = extras["rotated_image"]
+                if "tilt_angle" in extras:
+                    st.write("Detected tilt angle:", extras["tilt_angle"])
+
+            if output_order:
+                texts = [str(i) for i in list(range(len(bboxes)))]
+            else:
+                texts = ["" for _ in bboxes]
+
+            if output_text_in_image:
+                texts = [t + " " + b["text"] for t, b in zip(texts, bboxes)]
+
+            if confidence_text:
+                texts = [t + " " + str(round(b["confidence"], 2)) for t, b in zip(texts, bboxes)]
+
+            if show_confidence:
+                # Normalize confidence to be between 0 and 1
+                if len(bboxes) == 0:
+                    cmin, cmax = 0.0, 1.0
                 else:
-                    st.image(img_sample)
+                    cmin, cmax = min(bbox["confidence"] for bbox in bboxes), max(bbox["confidence"] for bbox in bboxes)
+                fill_opacities = [1 - bbox["confidence"] for bbox in bboxes]
+            else:
+                fill_opacities = 0.2
+
+            img = resize_min(page, 2048)
+
+            img = draw_bboxes(
+                img=img,
+                bboxes=[bbox["bbox"] for bbox in bboxes],
+                strokewidths=0,  # Could also be a list for each bbox
+                colors="darkgreen",
+                fill_colors="blue",
+                fill_opacities=fill_opacities,
+                texts=texts,
+                fontsize=font_size,
+            )
+            if allow_big_images:
+                st.image(img, width=img.size[0])
+            else:
+                st.image(img)
+
+            if output_ocr_text:
+                st.write("OCR Text:", " ".join([bbox["text"] for bbox in bboxes]))
+            if "img_samples" in extras:
+                st.markdown("### Image samples")
+                for img_sample in extras["img_samples"]:
+                    if allow_big_images:
+                        st.image(img_sample, width=img_sample.size[0])
+                    else:
+                        st.image(img_sample)
+
+    with col2:
+        for page in pages:
+            # Start time measurement
+            start = time.time()
+
+            second_ocr = GoogleOCR(
+                ocr_samples=ocr_samples,
+                cache_file="googlecache.gcache" if use_ocr_cache else None,
+                auto_rotate=auto_rotate,
+                correct_tilt=tilt_correction,
+                max_size=max_size,
+                verbose=True,
+            )
+
+            if do_profiling:
+                with Profiler():
+                    bboxes, extras = second_ocr.ocr(page, return_extra=True)
+            else:
+                bboxes, extras = second_ocr.ocr(page, return_extra=True)
+
+            # End time measurement and print time (we only measure the OCR time, not the image loading time etc.)
+            end = time.time()
+            st.write("Time taken for OCR: ", end - start, "seconds")
+
+            bboxes = bboxs2dicts(bboxes, extras["confidences"][0])
+
+            # Filter bboxes by confidence
+            bboxes = [bbox for bbox in bboxes if bbox["confidence"] > confidence_threshold]
+
+            if "rotated_image" in extras:
+                page = extras["rotated_image"]
+                if "tilt_angle" in extras:
+                    st.write("Detected tilt angle:", extras["tilt_angle"])
+
+            if output_order:
+                texts = [str(i) for i in list(range(len(bboxes)))]
+            else:
+                texts = ["" for _ in bboxes]
+
+            if output_text_in_image:
+                texts = [t + " " + b["text"] for t, b in zip(texts, bboxes)]
+
+            if confidence_text:
+                texts = [t + " " + str(round(b["confidence"], 2)) for t, b in zip(texts, bboxes)]
+
+            if show_confidence:
+                # Normalize confidence to be between 0 and 1
+                if len(bboxes) == 0:
+                    cmin, cmax = 0.0, 1.0
+                else:
+                    cmin, cmax = min(bbox["confidence"] for bbox in bboxes), max(bbox["confidence"] for bbox in bboxes)
+                fill_opacities = [1 - bbox["confidence"] for bbox in bboxes]
+            else:
+                fill_opacities = 0.2
+
+            img = resize_min(page, 2048)
+
+            img = draw_bboxes(
+                img=img,
+                bboxes=[bbox["bbox"] for bbox in bboxes],
+                strokewidths=0,  # Could also be a list for each bbox
+                colors="darkgreen",
+                fill_colors="blue",
+                fill_opacities=fill_opacities,
+                texts=texts,
+                fontsize=font_size,
+            )
+            if allow_big_images:
+                st.image(img, width=img.size[0])
+            else:
+                st.image(img)
+
+            if output_ocr_text:
+                st.write("OCR Text:", " ".join([bbox["text"] for bbox in bboxes]))

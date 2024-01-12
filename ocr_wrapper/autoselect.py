@@ -4,7 +4,7 @@ from __future__ import annotations
 import os
 from typing import Optional
 
-from ocr_wrapper import AwsOCR, AzureOCR, EasyOCR, GoogleOCR, OcrWrapper, PaddleOCR
+from ocr_wrapper import AwsOCR, AzureOCR, EasyOCR, GoogleOCR, OcrWrapper, PaddleOCR, GoogleAzureOCR
 
 
 class InvalidOcrProviderException(Exception):
@@ -16,6 +16,7 @@ class InvalidOcrProviderException(Exception):
 name2engine = dict[str, type[OcrWrapper]](
     google=GoogleOCR,
     azure=AzureOCR,
+    googleazure=GoogleAzureOCR,  # type: ignore
     aws=AwsOCR,
     easy=EasyOCR,
     paddle=PaddleOCR,

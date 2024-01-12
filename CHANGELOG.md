@@ -4,7 +4,7 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 
 ## Next Release
 ### Added
-
+- Added new OCR wrapper that combines Google OCR and Azure OCR to compensate shortcomings of Google OCR
 ### Changed
 
 ### Fixed

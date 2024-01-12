@@ -5,15 +5,21 @@ An image is analyzed by GoogleOCR and AzureOCR in parallel, a heuristic is used 
 are added to the final list of bboxes.
 """
 from __future__ import annotations
-from typing import Union, cast, Optional
 
-from PIL import Image
-from ocr_wrapper import GoogleOCR, AzureOCR, draw_bboxes
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from ocr_wrapper import BBox
-from ocr_wrapper.tilt_correction import correct_tilt
-from ocr_wrapper.ocr_wrapper import rotate_image
+import os
+import shelve
+from concurrent.futures import ThreadPoolExecutor
+from threading import Lock
+from typing import Optional, Union, cast
+
 import rtree
+from PIL import Image
+
+from ocr_wrapper import AzureOCR, BBox, GoogleOCR
+from ocr_wrapper.ocr_wrapper import rotate_image
+from ocr_wrapper.tilt_correction import correct_tilt
+
+from .utils import get_img_hash
 
 
 class GoogleAzureOCR:
@@ -22,16 +28,35 @@ class GoogleAzureOCR:
     def __init__(
         self,
         cache_file: Optional[str] = None,
-        ocr_samples: int = 2,
+        ocr_samples: Optional[int] = None,
         supports_multi_samples: bool = False,
         max_size: Optional[int] = 1024,
-        auto_rotate: bool = False,  # Compensate for multiples of 90deg rotation (after OCR using OCR info)
-        correct_tilt: bool = True,  # Compensate for small rotations (purely based on image content)
+        auto_rotate: Optional[bool] = None,
+        correct_tilt: Optional[bool] = None,
         verbose: bool = False,
     ):
+        if ocr_samples is not None:
+            print("Warning: ocr_samples is ignored by GoogleAzureOCR")
+        if supports_multi_samples:
+            print("Warning: supports_multi_samples is ignored by GoogleAzureOCR")
+        if auto_rotate is not None:
+            print("Warning: auto_rotate is ignored by GoogleAzureOCR")
+        if correct_tilt is not None:
+            print("Warning: correct_tilt is ignored by GoogleAzureOCR")
+
+        if cache_file is None:
+            cache_file = os.getenv("OCR_WRAPPER_CACHE_FILE", None)
+        self.cache_file = cache_file
         self.max_size = max_size
-        self.google_ocr = GoogleOCR(auto_rotate=True, correct_tilt=False, ocr_samples=1, max_size=max_size)
-        self.azure_ocr = AzureOCR(auto_rotate=False, correct_tilt=False, ocr_samples=1, max_size=max_size)
+        self.verbose = verbose
+        self.google_ocr = GoogleOCR(
+            auto_rotate=True, correct_tilt=False, ocr_samples=1, max_size=max_size, verbose=verbose
+        )
+        self.azure_ocr = AzureOCR(
+            auto_rotate=False, correct_tilt=False, ocr_samples=1, max_size=max_size, verbose=verbose
+        )
+
+        self.shelve_mutex = Lock()  # Mutex to ensure that only one thread is writing to the cache file at a time
 
     def ocr(self, img: Image.Image, return_extra: bool = False) -> Union[list[BBox], tuple[list[BBox], dict]]:
         """Runs OCR on an image using both Google and Azure OCR, and combines the results.
@@ -40,6 +65,13 @@ class GoogleAzureOCR:
             img (Image.Image): The image to run OCR on.
             return_extra (bool, optional): Whether to return extra information. Defaults to False.
         """
+        # Return cached result if it exists
+        if self.cache_file is not None:
+            img_hash = get_img_hash(img)
+            cached = self._get_from_shelf(img_hash, return_extra)
+            if cached is not None:
+                return cached
+
         # Do the tilt angle correction ourselves externally to have consistend input to Google and Azure
         img, tilt_angle = correct_tilt(img)
 
@@ -48,7 +80,7 @@ class GoogleAzureOCR:
             future_google = executor.submit(self.google_ocr.ocr, img, return_extra=True)
             future_azure = executor.submit(self.azure_ocr.ocr, img, return_extra=True)
             google_bboxes, google_extra = cast(tuple[list[BBox], dict], future_google.result())
-            azure_bboxes, azure_extra = cast(tuple[list[BBox], dict], future_azure.result())
+            azure_bboxes, _ = cast(tuple[list[BBox], dict], future_azure.result())
 
         # Use the rotation information from google to correctly rotate the image and the bboxes
         google_rotation_angle = google_extra["document_rotation"]
@@ -75,9 +107,52 @@ class GoogleAzureOCR:
         }
 
         if return_extra:
-            return combined_bboxes, extra
+            result = combined_bboxes, extra
         else:
-            return combined_bboxes
+            result = combined_bboxes
+
+        if self.cache_file is not None:
+            self._put_on_shelf(img_hash, return_extra, result)  # Cache result # type: ignore
+        return result
+
+    def multi_img_ocr(
+        self, imgs: list[Image.Image], return_extra: bool = False
+    ) -> Union[list[list[BBox]], tuple[list[list[BBox]], list[dict]]]:
+        """Runs OCR in parallel on multiple images using both Google and Azure OCR, and combines the results.
+
+        Args:
+            img (list[Image.Image]): The pages to run OCR on.
+            return_extra (bool, optional): Whether to return extra information. Defaults to False.
+        """
+        # Execute self.ocr in parallel on all images
+        with ThreadPoolExecutor(max_workers=32) as executor:
+            futures = [executor.submit(self.ocr, img, return_extra) for img in imgs]
+            results = [future.result() for future in futures]
+
+        if return_extra:
+            bboxes, extras = zip(*results)
+            return list(bboxes), list(extras)
+        else:
+            results = cast(list[list[BBox]], results)
+            return results
+
+    def _get_from_shelf(self, img_hash: str, return_extra: bool):
+        """Get a OCR response from the cache, if it exists."""
+        if self.cache_file is not None and os.path.exists(self.cache_file):
+            hash_str = repr(("googleazure", img_hash, return_extra))
+            with self.shelve_mutex:
+                with shelve.open(self.cache_file, "r") as db:
+                    if hash_str in db.keys():  # We have a cached version
+                        if self.verbose:
+                            print(f"Using cached results for hash {hash_str}")
+                        return db[hash_str]
+
+    def _put_on_shelf(self, img_hash: str, return_extra: bool, response):
+        if self.cache_file is not None:
+            hash_str = repr(("googleazure", img_hash, return_extra))
+            with self.shelve_mutex:
+                with shelve.open(self.cache_file, "c") as db:
+                    db[hash_str] = response
 
 
 class BBoxOverlapChecker:

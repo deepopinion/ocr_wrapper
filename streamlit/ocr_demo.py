@@ -78,7 +78,7 @@ if uploaded_file is not None:
     filelike = BytesIO(bytes_data)
     if uploaded_file.name.lower().endswith("pdf"):
         with tempfile.TemporaryDirectory() as tmppath:
-            pages = convert_from_bytes(filelike.read(), dpi=dpi)
+            pages = convert_from_bytes(filelike.read(), dpi=dpi, size=max_size)
             print(pages[0].size)
     else:
         pages = [Image.open(filelike)]

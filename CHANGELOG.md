@@ -11,6 +11,9 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 
 ### Removed
 
+## Release v0.0.14 (2024-01-12)
+### Fixed
+- Sets max size of longer side for GoogleOCR to 1024 (which it should have been already)
 
 ## Release v0.0.13 (2023-11-16)
 ### Changed

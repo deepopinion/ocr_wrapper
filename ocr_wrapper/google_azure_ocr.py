@@ -7,6 +7,7 @@ are added to the final list of bboxes.
 from __future__ import annotations
 
 import os
+import re
 import shelve
 from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
@@ -50,10 +51,18 @@ class GoogleAzureOCR:
         self.max_size = max_size
         self.verbose = verbose
         self.google_ocr = GoogleOCR(
-            auto_rotate=True, correct_tilt=False, ocr_samples=1, max_size=max_size, verbose=verbose
+            auto_rotate=True,
+            correct_tilt=False,
+            ocr_samples=1,
+            max_size=max_size,
+            verbose=verbose,
         )
         self.azure_ocr = AzureOCR(
-            auto_rotate=False, correct_tilt=False, ocr_samples=1, max_size=max_size, verbose=verbose
+            auto_rotate=False,
+            correct_tilt=False,
+            ocr_samples=1,
+            max_size=max_size,
+            verbose=verbose,
         )
 
         self.shelve_mutex = Lock()  # Mutex to ensure that only one thread is writing to the cache file at a time
@@ -84,12 +93,12 @@ class GoogleAzureOCR:
 
         # Use the rotation information from google to correctly rotate the image and the bboxes
         google_rotation_angle = google_extra["document_rotation"]
-        google_bboxes = [bbox.rotate(google_rotation_angle) for bbox in google_bboxes]
+        # google_bboxes = [bbox.rotate(google_rotation_angle) for bbox in google_bboxes]
         azure_bboxes = [bbox.rotate(google_rotation_angle) for bbox in azure_bboxes]
         img = rotate_image(img, google_rotation_angle)
 
         # Remove unwanted bboxes from Google OCR result
-        google_bboxes = _filter_unwanted_google_bboxes(google_bboxes)
+        google_bboxes = _filter_unwanted_google_bboxes(google_bboxes, width_height_ratio=img.width / img.height)
 
         # Combine the bboxes from Google and Azure
         bbox_overlap_checker = BBoxOverlapChecker(google_bboxes)
@@ -162,13 +171,13 @@ class BBoxOverlapChecker:
         for i, bbox in enumerate(bboxes):
             self.rtree.insert(i, bbox.get_shapely_polygon().bounds)
 
-    def get_overlapping_bboxes(self, bbox: BBox, threshold: float = 0.1) -> list[BBox]:
+    def get_overlapping_bboxes(self, bbox: BBox, threshold: float = 0.01) -> list[BBox]:
         """Returns the bboxes that overlap with the given bbox.
 
         Args:
             bbox (BBox): The bbox to check for overlapping bboxes.
             threshold (float, optional): The minimum overlap that is required for a bbox to be returned (0.0 to 1.0).
-                Defaults to 0.1. Overlap is checked in both directions.
+                Defaults to 0.01. Overlap is checked in both directions.
 
         Returns:
             list[BBox]: The bboxes that overlap with the given bbox.
@@ -192,10 +201,12 @@ def _get_mean_bbox_area(bboxes: list[BBox]) -> float:
     Returns:
         float: The mean area of the bboxes.
     """
+    if len(bboxes) == 0:
+        return 0.0
     return sum(bbox.area() for bbox in bboxes) / len(bboxes)
 
 
-def _bbox_is_vertically_aligned(bb: BBox) -> bool:
+def _bbox_is_vertically_aligned(bb: BBox, width_height_ratio: float) -> bool:
     """Returns whether a bbox is vertically aligned.
 
     Args:
@@ -204,12 +215,50 @@ def _bbox_is_vertically_aligned(bb: BBox) -> bool:
     Returns:
         bool: Whether the bbox is vertically aligned.
     """
-    width = abs(bb.BRx - bb.TLx)
+    width = abs(bb.BRx - bb.TLx) * width_height_ratio
     height = abs(bb.BLy - bb.TLy)
+
     return width < height
 
 
-def _filter_unwanted_google_bboxes(bboxes: list[BBox]) -> list[BBox]:
+def _filter_date_boxes(bboxes: list[BBox], max_boxes_range: int = 10) -> list[BBox]:
+    """
+    Filters out bounding boxes that, concatenated, match patterns like "dd/mm/yyyy - dd/mm/yyyy".
+
+    Args:
+        bboxes (list[BBox]): The bboxes to filter.
+        max_boxes_range (int, optional): The maximum number of bboxes to consider for a match. Defaults to 15.
+    """
+    max_boxes_range = min(max_boxes_range, len(bboxes))
+    date_range_pattern = r"^\s*\d{1,2}\s*/\s*\d{1,2}\s*/\s*\d{4}\s*-\s*\d{1,2}\s*/\s*\d{1,2}\s*/\s*\d{4}\s*$"
+
+    # Function to get all overlapping consecutive elements of a list of a given length
+    # e.g. consecutive_elements([1, 2, 3, 4], 2) -> [(1, 2), (2, 3), (3, 4)]
+    def consecutive_elements(lst, n):
+        return zip(*(lst[i:] for i in range(n)))
+
+    # Function to check if the concatenation of a given combination of strings matches the pattern
+    def is_match(combination):
+        concatenated = "".join(c.text for c in combination).replace(" ", "")
+        _match = re.match(date_range_pattern, concatenated)
+        if _match:
+            print(f"Match: {concatenated}")
+        return _match
+
+    # Generate all combinations of strings in the list of different lengths
+    for r in range(max_boxes_range, 1, -1):
+        for comb in consecutive_elements(bboxes, r):
+            if is_match(comb):
+                # Remove the strings in the combination from the original list
+                for item in comb:
+                    if item in bboxes:
+                        bboxes.remove(item)
+                return _filter_date_boxes(bboxes)  # Recursively call to find more matches
+
+    return bboxes
+
+
+def _filter_unwanted_google_bboxes(bboxes: list[BBox], width_height_ratio: float) -> list[BBox]:
     """Filters out probably incorrect bboxes from the GoogleOCR result.
 
     Currently does the following filtering:
@@ -217,6 +266,7 @@ def _filter_unwanted_google_bboxes(bboxes: list[BBox]) -> list[BBox]:
 
     Args:
         bboxes (list[BBox]): The bboxes to filter.
+        width_height_ratio (float): The width to height ratio of the image.
 
     Returns:
         list[BBox]: The filtered bboxes.
@@ -224,6 +274,7 @@ def _filter_unwanted_google_bboxes(bboxes: list[BBox]) -> list[BBox]:
     mean_area = _get_mean_bbox_area(bboxes)
     filtered_bboxes = []
     for bbox in bboxes:
-        if bbox.area() < mean_area or not _bbox_is_vertically_aligned(bbox):
+        if bbox.area() < mean_area or not _bbox_is_vertically_aligned(bbox, width_height_ratio):
             filtered_bboxes.append(bbox)
+    filtered_bboxes = _filter_date_boxes(filtered_bboxes)
     return filtered_bboxes

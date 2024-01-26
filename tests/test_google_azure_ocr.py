@@ -97,3 +97,26 @@ def test_document_without_text(ocr_with_auto_rotate, filename):
     img = Image.open(os.path.join(DATA_DIR, filename))
     res = ocr_with_auto_rotate.ocr(img)
     assert len(res) == 0
+
+
+def test_date_range_correction(ocr):
+    test_filename = "date_range_correction.png"
+    img = Image.open(os.path.join(DATA_DIR, test_filename))
+    res = ocr.ocr(img)
+    texts = [r.text for r in res]
+    expected_dates = ["4/01/2021", "4/01/2022"]
+    for expected_date in expected_dates:
+        assert expected_date in texts
+    assert "-" in texts
+
+
+def test_azure_date_range_split(ocr):
+    test_filename = "date_range_split.png"
+    img = Image.open(os.path.join(DATA_DIR, test_filename))
+    res = ocr.ocr(img)
+    assert len(res) == 15
+    texts = [r.text for r in res]
+    expected_dates = ["03/01/2016", "03/01/2017", "03/01/2018", "03/01/2019", "03/01/2020", "03/01/2021"]
+    for expected_date in expected_dates:
+        assert expected_date in texts
+    assert "-" in texts

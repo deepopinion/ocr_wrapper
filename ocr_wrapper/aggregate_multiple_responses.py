@@ -2,6 +2,7 @@
 Functions to generate multiple OCR responses and integrate them into a single response, improving the overall
 quality of the response.
 """
+
 from __future__ import annotations
 import rtree
 from PIL import Image

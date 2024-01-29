@@ -2,6 +2,7 @@
 Additional functions for working with BBox objects.
 Mainly here for compatibilty with the new ocr_wrapper package.
 """
+
 from __future__ import annotations
 from functools import lru_cache
 import rtree

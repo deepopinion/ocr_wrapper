@@ -1,4 +1,5 @@
 """Implements functionality to automatically select the correct OCR engine"""
+
 from __future__ import annotations
 
 import os

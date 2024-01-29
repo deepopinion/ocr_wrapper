@@ -4,6 +4,7 @@ This file contains the GoogleAzureWrapper class, which is a wrapper that combine
 An image is analyzed by GoogleOCR and AzureOCR in parallel, a heuristic is used to remove probably incorrect bboxes from the GoogleOCR result, and bboxes that are found by Azure and don't have a high overlap with the bboxes found by Google
 are added to the final list of bboxes.
 """
+
 from __future__ import annotations
 
 import os

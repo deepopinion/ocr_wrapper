@@ -11,11 +11,23 @@ from .bbox import BBox
 import math
 
 
-def interpolate_point(A: tuple[float, float], B: tuple[float, float], ratio: float) -> tuple[float, float]:
+def _interpolate_point(A: tuple[float, float], B: tuple[float, float], ratio: float) -> tuple[float, float]:
+    """Returns the point along the line AB at the given ratio"""
     return (A[0] + ratio * (B[0] - A[0]), A[1] + ratio * (B[1] - A[1]))
 
 
 def split_bbox(bbox: BBox, ratio: float) -> tuple[BBox, BBox]:
+    """
+    Splits a bounding box along the longer edge at the given ratio.
+
+    Args:
+        bbox: The bounding box.
+        ratio: The ratio at which to split the bounding box.
+
+    Returns:
+        A tuple containing the two resulting bounding boxes. Text, label, and is_pixels are copied
+        from the original bounding box.
+    """
     # Calculate lengths of top and side edges
     top_length = math.sqrt((bbox.TRx - bbox.TLx) ** 2 + (bbox.TRy - bbox.TLy) ** 2)
     side_length = math.sqrt((bbox.BLx - bbox.TLx) ** 2 + (bbox.BLy - bbox.TLy) ** 2)
@@ -23,8 +35,8 @@ def split_bbox(bbox: BBox, ratio: float) -> tuple[BBox, BBox]:
     # Determine longer edge and split points
     if top_length >= side_length:
         # Splitting along the top edge
-        new_top_point = interpolate_point((bbox.TLx, bbox.TLy), (bbox.TRx, bbox.TRy), ratio)
-        new_bottom_point = interpolate_point((bbox.BLx, bbox.BLy), (bbox.BRx, bbox.BRy), ratio)
+        new_top_point = _interpolate_point((bbox.TLx, bbox.TLy), (bbox.TRx, bbox.TRy), ratio)
+        new_bottom_point = _interpolate_point((bbox.BLx, bbox.BLy), (bbox.BRx, bbox.BRy), ratio)
         bbox1 = BBox(
             bbox.TLx,
             bbox.TLy,
@@ -47,8 +59,8 @@ def split_bbox(bbox: BBox, ratio: float) -> tuple[BBox, BBox]:
         )
     else:
         # Splitting along the side edge
-        new_left_point = interpolate_point((bbox.TLx, bbox.TLy), (bbox.BLx, bbox.BLy), ratio)
-        new_right_point = interpolate_point((bbox.TRx, bbox.TRy), (bbox.BRx, bbox.BRy), ratio)
+        new_left_point = _interpolate_point((bbox.TLx, bbox.TLy), (bbox.BLx, bbox.BLy), ratio)
+        new_right_point = _interpolate_point((bbox.TRx, bbox.TRy), (bbox.BRx, bbox.BRy), ratio)
         bbox1 = BBox(
             bbox.TLx,
             bbox.TLy,

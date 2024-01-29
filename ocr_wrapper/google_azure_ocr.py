@@ -33,7 +33,7 @@ class GoogleAzureOCR:
         cache_file: Optional[str] = None,
         ocr_samples: Optional[int] = None,
         supports_multi_samples: bool = False,
-        max_size: Optional[int] = 1024,
+        max_size: Optional[int] = 4096,
         auto_rotate: Optional[bool] = None,
         correct_tilt: Optional[bool] = None,
         verbose: bool = False,
@@ -128,16 +128,17 @@ class GoogleAzureOCR:
         return result
 
     def multi_img_ocr(
-        self, imgs: list[Image.Image], return_extra: bool = False
+        self, imgs: list[Image.Image], return_extra: bool = False, max_workers: int = 32
     ) -> Union[list[list[BBox]], tuple[list[list[BBox]], list[dict]]]:
         """Runs OCR in parallel on multiple images using both Google and Azure OCR, and combines the results.
 
         Args:
             img (list[Image.Image]): The pages to run OCR on.
             return_extra (bool, optional): Whether to return extra information. Defaults to False.
+            max_workers (int, optional): The maximum number of threads to use. Defaults to 32.
         """
         # Execute self.ocr in parallel on all images
-        with ThreadPoolExecutor(max_workers=32) as executor:
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = [executor.submit(self.ocr, img, return_extra) for img in imgs]
             results = [future.result() for future in futures]
 
@@ -168,6 +169,15 @@ class GoogleAzureOCR:
 
 
 class BBoxOverlapChecker:
+    """
+    Class to check whether a bbox overlaps with any of a list of bboxes.
+
+    Uses an RTree to quickly find overlapping bboxes.
+
+    Args:
+        bboxes (list[BBox]): The bboxes that will be checked for overlap against
+    """
+
     def __init__(self, bboxes: list[BBox]):
         self.bboxes = bboxes
         self.rtree = rtree.index.Index()
@@ -178,7 +188,7 @@ class BBoxOverlapChecker:
         """Returns the bboxes that overlap with the given bbox.
 
         Args:
-            bbox (BBox): The bbox to check for overlapping bboxes.
+            bbox (BBox): The bbox to check for overlap.
             threshold (float, optional): The minimum overlap that is required for a bbox to be returned (0.0 to 1.0).
                 Defaults to 0.01. Overlap is checked in both directions.
 
@@ -230,7 +240,7 @@ def _filter_date_boxes(bboxes: list[BBox], max_boxes_range: int = 10) -> list[BB
 
     Args:
         bboxes (list[BBox]): The bboxes to filter.
-        max_boxes_range (int, optional): The maximum number of bboxes to consider for a match. Defaults to 15.
+        max_boxes_range (int, optional): The maximum number of bboxes to consider for a match. Defaults to 10.
     """
     max_boxes_range = min(max_boxes_range, len(bboxes))
     date_range_pattern = r"^\s*\d{1,2}\s*/\s*\d{1,2}\s*/\s*\d{4}\s*-\s*\d{1,2}\s*/\s*\d{1,2}\s*/\s*\d{4}\s*$"
@@ -266,6 +276,7 @@ def _filter_unwanted_google_bboxes(bboxes: list[BBox], width_height_ratio: float
 
     Currently does the following filtering:
     - Removes bboxes with an area that is bigger than the mean area of all bboxes in the list and that are vertically aligned
+    - Filters out bounding boxes that, concatenated, match patterns like "dd/mm/yyyy - dd/mm/yyyy".
 
     Args:
         bboxes (list[BBox]): The bboxes to filter.
@@ -285,7 +296,7 @@ def _filter_unwanted_google_bboxes(bboxes: list[BBox], width_height_ratio: float
 
 def _split_azure_date_boxes(bboxes: list[BBox]) -> list[BBox]:
     """
-    Splits date boxes that contain a date range of the format "dd/mm/yyyy - dd/mm/yyyy" into two separate boxes.
+    Splits date boxes that contain a date range of the format "dd/mm/yyyy - dd/mm/yyyy" into three separate boxes.
 
     Args:
         bboxes (list[BBox]): The bboxes to filter.

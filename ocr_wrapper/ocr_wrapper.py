@@ -111,7 +111,7 @@ class OcrWrapper(ABC):
         return bboxes
 
     def multi_img_ocr(
-        self, imgs: list[Image.Image], return_extra: bool = False
+        self, imgs: list[Image.Image], return_extra: bool = False, max_workers: int = 32
     ) -> Union[list[list[BBox]], tuple[list[list[BBox]], list[dict]]]:
         """Returns OCR result for a list of images instead of a single image.
 
@@ -120,6 +120,7 @@ class OcrWrapper(ABC):
         Args:
             imgs: Images to be processed
             return_extra: If True, returns a tuple of (bboxes, extra) where extra is a list of dicts containing extra information
+            max_workers: Maximum number of threads to use for parallel processing
         """
         results = []
         for img in imgs:

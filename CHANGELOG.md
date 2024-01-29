@@ -5,6 +5,7 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 ## Next Release
 ### Added
 - Added new OCR wrapper that combines Google OCR and Azure OCR to compensate shortcomings of Google OCR
+- Added new method `multi_img_ocr` to all OCR wrappers to be able to process multiple images at the same time
 ### Changed
 
 ### Fixed

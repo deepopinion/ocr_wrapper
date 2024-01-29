@@ -195,7 +195,7 @@ class GoogleOCR(OcrWrapper):
             os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.path.expanduser(credentials_path)
         # Create the client with the specified endpoint
         self.endpoint = endpoint
-        self.client = vision.ImageAnnotatorClient(client_options={"api_endpoint": endpoint})
+        self.client = vision.ImageAnnotatorClient(client_options={"api_endpoint": self.endpoint})
 
     @requires_gcloud
     def _get_ocr_response(self, img: Image.Image):

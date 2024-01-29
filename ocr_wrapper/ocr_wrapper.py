@@ -115,6 +115,8 @@ class OcrWrapper(ABC):
     ) -> Union[list[list[BBox]], tuple[list[list[BBox]], list[dict]]]:
         """Returns OCR result for a list of images instead of a single image.
 
+        Depending on the specific wrapper, might execute faster than calling ocr() multiple times.
+
         Args:
             imgs: Images to be processed
             return_extra: If True, returns a tuple of (bboxes, extra) where extra is a list of dicts containing extra information

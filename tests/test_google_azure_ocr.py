@@ -3,6 +3,7 @@ import os
 import pytest
 from ocr_wrapper import GoogleAzureOCR
 from PIL import Image
+from ocr_wrapper.google_azure_ocr import merge_idx_lists
 
 filedir = os.path.dirname(__file__)
 DATA_DIR = os.path.join(filedir, "data")
@@ -120,3 +121,18 @@ def test_azure_date_range_split(ocr):
     for expected_date in expected_dates:
         assert expected_date in texts
     assert "-" in texts
+
+
+@pytest.mark.parametrize(
+    "raw_a, raw_b, sorted_ab, expected",
+    [
+        ([1, 2, 3, 4, 5], [6, 7, 8], [4, 2, 5, 6, 7, 3, 1, 8], [1, 8, 2, 3, 4, 5, 6, 7]),
+        ([], [], [], []),
+        ([], [2, 3, 4], [4, 2, 3], [4, 2, 3]),
+        ([4, 5, 6], [], [5, 6, 4], [4, 5, 6]),
+        ([1], [2, 3, 4, 5], [3, 4, 1, 5, 2], [3, 4, 1, 5, 2]),
+    ],
+)
+def test_merge_idx_lists(raw_a, raw_b, sorted_ab, expected):
+    res = merge_idx_lists(raw_a, raw_b, sorted_ab)
+    assert res == expected

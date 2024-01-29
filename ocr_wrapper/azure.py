@@ -9,6 +9,8 @@ from PIL import Image
 from .bbox import BBox
 from .ocr_wrapper import OcrWrapper
 
+import time
+
 try:
     from azure.cognitiveservices.vision.computervision import ComputerVisionClient
     from azure.cognitiveservices.vision.computervision.models import (
@@ -98,6 +100,7 @@ class AzureOCR(OcrWrapper):
         read_result = self._get_from_shelf(img)
         if read_result is None:
             # If that fails (no cache file, not yet cached, ...), get response from Azure
+            start = time.time()
             read_response = self.client.read_in_stream(img_stream, raw=True)
             read_operation_location = read_response.headers["Operation-Location"]
             operation_id = read_operation_location.split("/")[-1]
@@ -109,6 +112,9 @@ class AzureOCR(OcrWrapper):
                 time.sleep(0.1)
             if read_result.status != OperationStatusCodes.succeeded:
                 raise Exception("Azure operation returned error")
+            end = time.time()
+            if self.verbose:
+                print("Azure OCR took ", end - start, "seconds")
             self._put_on_shelf(img, read_result)
         return read_result
 

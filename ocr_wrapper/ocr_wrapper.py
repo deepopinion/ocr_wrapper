@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from hashlib import sha256
 from io import BytesIO
 from threading import Lock
-from typing import Optional, Union
+from typing import Optional, Union, cast
 
 from PIL import Image, ImageDraw, ImageOps
 
@@ -109,6 +109,29 @@ class OcrWrapper(ABC):
         if return_extra:
             return bboxes, self.extra
         return bboxes
+
+    def multi_img_ocr(
+        self, imgs: list[Image.Image], return_extra: bool = False, max_workers: int = 32
+    ) -> Union[list[list[BBox]], tuple[list[list[BBox]], list[dict]]]:
+        """Returns OCR result for a list of images instead of a single image.
+
+        Depending on the specific wrapper, might execute faster than calling ocr() multiple times.
+
+        Args:
+            imgs: Images to be processed
+            return_extra: If True, returns a tuple of (bboxes, extra) where extra is a list of dicts containing extra information
+            max_workers: Maximum number of threads to use for parallel processing
+        """
+        results = []
+        for img in imgs:
+            results.append(self.ocr(img, return_extra=return_extra))
+
+        if return_extra:
+            bboxes, extras = zip(*results)
+            return list(bboxes), list(extras)
+        else:
+            results = cast(list[list[BBox]], results)
+            return results
 
     def _get_multi_response(self, img: Image.Image) -> list:
         """Get OCR response from multiple samples of the same image.

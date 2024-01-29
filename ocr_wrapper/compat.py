@@ -1,6 +1,7 @@
 """
 Functions for converting between the old and new way that OCR results are stored
 """
+
 from __future__ import annotations
 from ocr_wrapper.bbox import BBox
 

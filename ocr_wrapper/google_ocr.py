@@ -8,6 +8,7 @@ from typing import Optional, List
 from PIL import Image
 from .bbox import BBox
 from .ocr_wrapper import OcrWrapper
+import time
 
 try:
     from google.cloud import vision
@@ -193,7 +194,8 @@ class GoogleOCR(OcrWrapper):
                 credentials_path = "~/.config/gcloud/credentials.json"
             os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.path.expanduser(credentials_path)
         # Create the client with the specified endpoint
-        self.client = vision.ImageAnnotatorClient(client_options={"api_endpoint": endpoint})
+        self.endpoint = endpoint
+        self.client = vision.ImageAnnotatorClient(client_options={"api_endpoint": self.endpoint})
 
     @requires_gcloud
     def _get_ocr_response(self, img: Image.Image):
@@ -210,13 +212,18 @@ class GoogleOCR(OcrWrapper):
             nb_repeats = 2  # Try to repeat twice before failing
             while True:
                 try:
+                    start = time.time()
                     response = self.client.document_text_detection(image=vision_img)
+                    end = time.time()
+                    if self.verbose:
+                        print(f"Google OCR took {end - start} seconds")
                     break
-                except Exception:
+                except Exception as e:
                     if nb_repeats == 0:
                         raise
                     nb_repeats -= 1
                     sleep(1.0)
+                    print(f"Warning: Google OCR failed, with {e}")
             self._put_on_shelf(img, response)
         return response
 

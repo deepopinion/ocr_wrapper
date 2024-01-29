@@ -2,6 +2,7 @@
 Functions to generate multiple OCR responses and integrate them into a single response, improving the overall
 quality of the response.
 """
+
 from __future__ import annotations
 import rtree
 from PIL import Image
@@ -36,6 +37,8 @@ def _find_overlapping_bboxes(bbox: dict, bboxes: list[dict], idx: rtree.index.In
 def _group_overlapping_bboxes(bboxes: list[dict], threshold: float) -> list[list[dict]]:
     """
     Group the bounding boxes that have an overlap greater than the given threshold.
+
+    WARNING: There is some special behaviour here that is specific for the use case of aggregating multiple OCR responses. A more general grouping function can be found in bbox_utils.py
 
     Args:
         bboxes: The dictionaries containing the bounding boxes and other information.

@@ -4,14 +4,19 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 
 ## Next Release
 ### Added
-- Added new OCR wrapper that combines Google OCR and Azure OCR to compensate shortcomings of Google OCR
-- Added new method `multi_img_ocr` to all OCR wrappers to be able to process multiple images at the same time
-- Adds support for the environment variable `OCR_PROVIDER_MAPPING` that can give a list of OCR provider replacements. Eg. `"google=googleazure"` means that all places where `google` would be instantiated, `googleazure` will be used instead. This can be used to replace the default Google OCR with the new combined OCR wrapper.
+
 ### Changed
 
 ### Fixed
 
 ### Removed
+
+
+## Relase v0.0.15 (2024-02-01)
+### Added
+- Added new OCR wrapper that combines Google OCR and Azure OCR to compensate shortcomings of Google OCR
+- Added new method `multi_img_ocr` to all OCR wrappers to be able to process multiple images at the same time
+- Adds support for the environment variable `OCR_PROVIDER_MAPPING` that can give a list of OCR provider replacements. Eg. `"google=googleazure"` means that all places where `google` would be instantiated, `googleazure` will be used instead. This can be used to replace the default Google OCR with the new combined OCR wrapper.
 
 ## Release v0.0.14 (2024-01-12)
 ### Fixed

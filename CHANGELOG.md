@@ -2,7 +2,7 @@
 The version numbers are according to [Semantic Versioning](http://semver.org/).
 (Versions prior to v1.0.0 might not strictly follow semantic versioning)
 
-## Next Release
+## Release v0.0.x ()
 ### Added
 
 ### Changed

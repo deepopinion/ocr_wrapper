@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="ocr_wrapper",
-    version="0.0.15",
+    version="0.0.16",
     packages=find_packages(),
     include_package_data=True,
     license="MIT",

@@ -13,15 +13,9 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 
 
 ## Release v0.0.16 (2024-02-06)
-### Added
-
-### Changed
-
 ### Fixed
 - Fixed a bug with concurrent OCR of multiple pages
 - Fixed a problem when going above the rate limit of Azure
-### Removed
-
 
 ## Relase v0.0.15 (2024-02-01)
 ### Added

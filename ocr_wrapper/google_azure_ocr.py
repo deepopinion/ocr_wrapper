@@ -53,20 +53,6 @@ class GoogleAzureOCR:
         self.cache_file = cache_file
         self.max_size = max_size
         self.verbose = verbose
-        self.google_ocr = GoogleOCR(
-            auto_rotate=True,
-            correct_tilt=False,
-            ocr_samples=1,
-            max_size=max_size,
-            verbose=verbose,
-        )
-        self.azure_ocr = AzureOCR(
-            auto_rotate=False,
-            correct_tilt=False,
-            ocr_samples=1,
-            max_size=max_size,
-            verbose=verbose,
-        )
 
         self.shelve_mutex = Lock()  # Mutex to ensure that only one thread is writing to the cache file at a time
 
@@ -84,13 +70,28 @@ class GoogleAzureOCR:
             if cached is not None:
                 return cached
 
+        google_ocr = GoogleOCR(
+            auto_rotate=True,
+            correct_tilt=False,
+            ocr_samples=1,
+            max_size=self.max_size,
+            verbose=self.verbose,
+        )
+        azure_ocr = AzureOCR(
+            auto_rotate=False,
+            correct_tilt=False,
+            ocr_samples=1,
+            max_size=self.max_size,
+            verbose=self.verbose,
+        )
+
         # Do the tilt angle correction ourselves externally to have consistend input to Google and Azure
         img, tilt_angle = correct_tilt(img)
 
         # Run Google OCR and Azure OCR in parallel via theadpool
         with ThreadPoolExecutor(max_workers=2) as executor:
-            future_google = executor.submit(self.google_ocr.ocr, img, return_extra=True)
-            future_azure = executor.submit(self.azure_ocr.ocr, img, return_extra=True)
+            future_google = executor.submit(google_ocr.ocr, img, return_extra=True)
+            future_azure = executor.submit(azure_ocr.ocr, img, return_extra=True)
             google_bboxes, google_extra = cast(tuple[list[BBox], dict], future_google.result())
             azure_bboxes, _ = cast(tuple[list[BBox], dict], future_azure.result())
 

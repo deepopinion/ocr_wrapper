@@ -15,7 +15,7 @@ setup(
     ],
     install_requires=[
         "Pillow",
-        "Shapely",
+        "Shapely>=2.0,<3.0",
         "pdf2image",
         "rtree",
         "opencv-python-headless",

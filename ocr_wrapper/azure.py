@@ -139,7 +139,7 @@ class AzureOCR(OcrWrapper):
         return read_result
 
     @requires_azure
-    def _convert_ocr_response(self, response, *, sample_nr: int = 0) -> tuple[List[BBox], dict[str, Any]]:
+    def _convert_ocr_response(self, response) -> tuple[List[BBox], dict[str, Any]]:
         """Converts the response given by Azure Read to a list of BBox"""
         bboxes = []
         confidences = []

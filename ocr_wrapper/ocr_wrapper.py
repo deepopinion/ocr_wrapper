@@ -148,7 +148,7 @@ class OcrWrapper(ABC):
             img_sample = generate_img_sample(img, i)
             extra = {"img_samples": img_sample}
             response = self._get_ocr_response(img_sample)
-            result, sample_extra = self._convert_ocr_response(response, sample_nr=i)
+            result, sample_extra = self._convert_ocr_response(response)
             extra.update(sample_extra)
 
             # Normalize boxes
@@ -199,7 +199,7 @@ class OcrWrapper(ABC):
         pass
 
     @abstractmethod
-    def _convert_ocr_response(self, response, *, sample_nr: int = 0) -> tuple[list[BBox], dict[str, Any]]:
+    def _convert_ocr_response(self, response) -> tuple[list[BBox], dict[str, Any]]:
         pass
 
     @staticmethod

@@ -62,7 +62,7 @@ class PaddleOCR(OcrWrapper):
         return response
 
     @requires_paddle
-    def _convert_ocr_response(self, response, *, sample_nr: int = 0) -> tuple[List[BBox], dict[str, Any]]:
+    def _convert_ocr_response(self, response) -> tuple[List[BBox], dict[str, Any]]:
         """Converts the response given by Google OCR to a list of BBox"""
         paddle_resp, resize_ratio = response
         bboxes = []

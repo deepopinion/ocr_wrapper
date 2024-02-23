@@ -62,7 +62,7 @@ class EasyOCR(OcrWrapper):
         return response
 
     @requires_easyocr
-    def _convert_ocr_response(self, response, *, sample_nr: int = 0) -> tuple[List[BBox], dict[str, Any]]:
+    def _convert_ocr_response(self, response) -> tuple[List[BBox], dict[str, Any]]:
         """Converts the response given by EasyOCR to a list of BBox"""
         bboxes, confidences = [], []
         # Iterate over all responses except the first. The first is for the whole document -> ignore

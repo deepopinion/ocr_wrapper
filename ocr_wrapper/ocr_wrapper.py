@@ -96,6 +96,10 @@ class OcrWrapper(ABC):
             bboxes, sample_extra = self._get_multi_response(img)
         extra.update(sample_extra)
 
+        # Convert confidences to a list of lists
+        if "confidences" in extra:
+            extra["confidences"] = [extra["confidences"]]
+
         if self.auto_rotate and "document_rotation" in extra:
             angle = extra["document_rotation"]
             # Rotate image

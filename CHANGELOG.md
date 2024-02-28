@@ -8,6 +8,8 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 ### Changed
 
 ### Fixed
+- Made OCR wrappers thread safe (previously it was only thread safe if every thread used its own instance of the wrapper class)
+- Fixed a bug where cache files did not always work on all systems
 
 ### Removed
 

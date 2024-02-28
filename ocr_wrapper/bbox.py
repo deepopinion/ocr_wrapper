@@ -650,7 +650,7 @@ def draw_bboxes(
     fontsize: int = 10,
     max_augment: float = 0.0,  # Amount of to randomly change position of the bbox (for easier interpretation wiht overlapping bboxes)
     text_goal_brightness: Optional[float] = None,
-):
+) -> Image.Image:
     """Draws bounding boxes with texts, colors, etc. on a PIL image
 
     Args:

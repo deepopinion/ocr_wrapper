@@ -4,7 +4,7 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 
 ## Release v0.0.x ()
 ### Added
-
+- Added checkbox detection with `GoogleDocumentOcrCheckboxDetector`
 ### Changed
 
 ### Fixed

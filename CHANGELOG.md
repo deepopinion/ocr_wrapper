@@ -4,15 +4,13 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 
 ## Release v0.0.x ()
 ### Added
-- Added checkbox detection with `GoogleDocumentOcrCheckboxDetector`
+- Added checkbox detection with `GoogleDocumentOcrCheckboxDetector` and integrated into `GoogleAzureOCR`
 ### Changed
 
+## Release v0.0.17 (2024-03-01)
 ### Fixed
 - Made OCR wrappers thread safe (previously it was only thread safe if every thread used its own instance of the wrapper class)
 - Fixed a bug where cache files did not always work on all systems
-
-### Removed
-
 
 ## Release v0.0.16 (2024-02-06)
 ### Fixed

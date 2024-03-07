@@ -34,8 +34,8 @@ To easily visualize bounding boxes, the library also offers the method `draw_bbo
 The function `autoselect_ocr_engine()` can be used to automatically return the class for the needed OCR engine, using the `OCR_PROVIDER` environment variable. `google`, `azure`, `aws`, `easy`, and `paddle` are valid settings. If no provider is explicitly set, Google OCR is chosen by default. 
 In case an invalid OCR provider is specified, an `InvalidOcrProviderException` will be raised.
 
-### GoogleOCR
-The credentials for Google OCR will be obtained from one of the following:
+### GoogleOCR and GoogleDocumentOcrCheckboxDetector
+The credentials will be obtained from one of the following:
 - The environment variable `GOOGLE_APPLICATION_CREDENTIALS`
 - A credentials file `~/.config/gcloud/credentials.json`
 - A credentials file `/credentials.json`

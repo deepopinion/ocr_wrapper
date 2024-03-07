@@ -14,6 +14,7 @@ For a usage example, see `tryme.ipynb`.
 In addition to the automatically installed requirements, you also need to install the packages needed for the individual OCR solutions. These are not automatically installed, since we don't want to force dependencies which are not really needed if you only use one specific OCR solution.
 
 - Google: `google-cloud-vision`
+- Google Document checkbox detection `google-cloud-documentai`
 - AWS: `boto3`
 - Azure: `azure-cognitiveservices-vision-computervision`
 - PaddleOCR: `paddleocr`

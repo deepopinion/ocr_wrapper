@@ -4,8 +4,16 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 
 ## Release v0.0.x ()
 ### Added
-- Added checkbox detection with `GoogleDocumentOcrCheckboxDetector` and integrated into `GoogleAzureOCR`
+
+### Fixed
+
 ### Changed
+
+### Removed
+
+## Release v0.0.18 (2024-03-07)
+### Added
+- Added checkbox detection with `GoogleDocumentOcrCheckboxDetector` and integrated into `GoogleAzureOCR`
 
 ## Release v0.0.17 (2024-03-01)
 ### Fixed

@@ -14,6 +14,7 @@ For a usage example, see `tryme.ipynb`.
 In addition to the automatically installed requirements, you also need to install the packages needed for the individual OCR solutions. These are not automatically installed, since we don't want to force dependencies which are not really needed if you only use one specific OCR solution.
 
 - Google: `google-cloud-vision`
+- Google Document checkbox detection `google-cloud-documentai`
 - AWS: `boto3`
 - Azure: `azure-cognitiveservices-vision-computervision`
 - PaddleOCR: `paddleocr`
@@ -34,8 +35,8 @@ To easily visualize bounding boxes, the library also offers the method `draw_bbo
 The function `autoselect_ocr_engine()` can be used to automatically return the class for the needed OCR engine, using the `OCR_PROVIDER` environment variable. `google`, `azure`, `aws`, `easy`, and `paddle` are valid settings. If no provider is explicitly set, Google OCR is chosen by default. 
 In case an invalid OCR provider is specified, an `InvalidOcrProviderException` will be raised.
 
-### GoogleOCR
-The credentials for Google OCR will be obtained from one of the following:
+### GoogleOCR and GoogleDocumentOcrCheckboxDetector
+The credentials will be obtained from one of the following:
 - The environment variable `GOOGLE_APPLICATION_CREDENTIALS`
 - A credentials file `~/.config/gcloud/credentials.json`
 - A credentials file `/credentials.json`

@@ -27,10 +27,16 @@ rotation_test_documents = [
     ("mixed_arabic_270deg.jpg", 270),
 ]
 
+# Set up env variables needed for checkbox detection
+PROJECT_ID = "1059850693164"
+PROCESSOR_ID = "60d8544ada1705c3"
+os.environ["GOOGLE_DOC_OCR_PROJECT_ID"] = PROJECT_ID
+os.environ["GOOGLE_DOC_OCR_PROCESSOR_ID"] = PROCESSOR_ID
+
 
 @pytest.fixture
 def ocr():
-    return GoogleAzureOCR(ocr_samples=1, correct_tilt=True, auto_rotate=False)
+    return GoogleAzureOCR(ocr_samples=1, correct_tilt=True, auto_rotate=False, add_checkboxes=True)
 
 
 @pytest.fixture
@@ -52,6 +58,22 @@ def test_google_azure_ocr(ocr):
     text = " ".join([str(r.text) for r in res])
     assert text == "This is a test ."
     assert len(extra["confidences"][0]) == len(res)
+
+
+def test_google_azure_ocr_checkboxes(ocr):
+    img = Image.open(os.path.join(DATA_DIR, "checkbox.png"))
+
+    res = ocr.ocr(img, return_extra=False)
+
+    checked = []
+    unchecked = []
+    for r in res:
+        if r.text == "☑":
+            checked.append(r)
+        elif r.text == "☐":
+            unchecked.append(r)
+    assert len(checked) == 8
+    assert len(unchecked) == 24
 
 
 def test_google_azure_orc_single_sample():

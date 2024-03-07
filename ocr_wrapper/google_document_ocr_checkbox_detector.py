@@ -30,14 +30,12 @@ def requires_gcloud(fn):
     return wrapper_decocator
 
 
-def _val_or_env(
-    val: Optional[str], env: str, default: Optional[str] = None
-) -> Optional[str]:
+def _val_or_env(val: Optional[str], env: str, default: Optional[str] = None) -> Optional[str]:
     """Return val if not None, else return the value of the environment variable env, if that is set, else return default."""
     return val if val is not None else os.getenv(env, default)
 
 
-def _visual_element_to_bbox(visual_element) -> BBox:
+def _visual_element_to_bbox(visual_element) -> tuple[BBox, float]:
     """
     Convert a Document AI visual element into a bounding box (BBox) object.
 
@@ -88,9 +86,7 @@ class GoogleDocumentOcrCheckboxDetector:
         )
 
         self.client = documentai.DocumentProcessorServiceClient(
-            client_options=ClientOptions(
-                api_endpoint=f"{self.location}-documentai.googleapis.com"
-            )
+            client_options=ClientOptions(api_endpoint=f"{self.location}-documentai.googleapis.com")
         )
         if (
             self.project_id is None
@@ -106,22 +102,14 @@ class GoogleDocumentOcrCheckboxDetector:
         )
 
     @requires_gcloud
-    def detect_checkboxes(
-        self, page: Union[Image.Image, documentai.RawDocument]
-    ) -> list[BBox]:
+    def detect_checkboxes(self, page: Union[Image.Image, documentai.RawDocument]) -> list[BBox]:
         if isinstance(page, Image.Image):
-            img_byte_arr = ocr_wrapper.OcrWrapper._pil_img_to_compressed(
-                image=page, compression="webp"
-            )
-            raw_document = documentai.RawDocument(
-                content=img_byte_arr, mime_type="image/webp"
-            )
+            img_byte_arr = ocr_wrapper.OcrWrapper._pil_img_to_compressed(image=page, compression="webp")
+            raw_document = documentai.RawDocument(content=img_byte_arr, mime_type="image/webp")
         elif isinstance(page, documentai.RawDocument):
             raw_document = page
         else:
-            raise ValueError(
-                "page should be of type Image.Image or documentai.types.RawDocument"
-            )
+            raise ValueError("page should be of type Image.Image or documentai.types.RawDocument")
 
         # Execute the request with exponential backoff and retry
         request = documentai.ProcessRequest(
@@ -132,13 +120,15 @@ class GoogleDocumentOcrCheckboxDetector:
         result = self.client.process_document(request=request)
 
         result = [
-            _visual_element_to_bbox(visual_element)
-            for visual_element in result.document.pages[0].visual_elements
+            _visual_element_to_bbox(visual_element) for visual_element in result.document.pages[0].visual_elements
         ]
         # For some reason, the system generally returns exactly the same checkbox twice, so we have to get rid of the duplicates
         result = list(set(result))
 
-        # Separate bboxes and confidence tuples
-        bboxes, confidences = zip(*result)
+        if len(result) == 0:
+            bboxes, confidences = [], []
+        else:
+            # Separate bboxes and confidence tuples
+            bboxes, confidences = zip(*result)
 
         return bboxes, confidences

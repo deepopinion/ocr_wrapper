@@ -18,6 +18,7 @@ import rtree
 from PIL import Image
 
 from ocr_wrapper import AzureOCR, BBox, GoogleOCR
+from ocr_wrapper.google_document_ocr_checkbox_detector import GoogleDocumentOcrCheckboxDetector
 from ocr_wrapper.ocr_wrapper import rotate_image
 from ocr_wrapper.tilt_correction import correct_tilt
 
@@ -37,6 +38,7 @@ class GoogleAzureOCR:
         max_size: Optional[int] = 4096,
         auto_rotate: Optional[bool] = None,
         correct_tilt: Optional[bool] = None,
+        add_checkboxes: bool = False,  # If True, Document OCR by Google is used to detect checkboxes
         verbose: bool = False,
     ):
         if ocr_samples is not None:
@@ -53,7 +55,7 @@ class GoogleAzureOCR:
         self.cache_file = cache_file
         self.max_size = max_size
         self.verbose = verbose
-
+        self.add_checkboxes = add_checkboxes
         self.shelve_mutex = Lock()  # Mutex to ensure that only one thread is writing to the cache file at a time
 
     def ocr(self, img: Image.Image, return_extra: bool = False) -> Union[list[BBox], tuple[list[BBox], dict]]:
@@ -84,6 +86,8 @@ class GoogleAzureOCR:
             max_size=self.max_size,
             verbose=self.verbose,
         )
+        if self.add_checkboxes:
+            checkbox_ocr = GoogleDocumentOcrCheckboxDetector()
 
         # Do the tilt angle correction ourselves externally to have consistend input to Google and Azure
         img, tilt_angle = correct_tilt(img)
@@ -92,13 +96,20 @@ class GoogleAzureOCR:
         with ThreadPoolExecutor(max_workers=2) as executor:
             future_google = executor.submit(google_ocr.ocr, img, return_extra=True)
             future_azure = executor.submit(azure_ocr.ocr, img, return_extra=True)
+            if self.add_checkboxes:
+                future_checkbox = executor.submit(checkbox_ocr.detect_checkboxes, img)
+
             google_bboxes, google_extra = cast(tuple[list[BBox], dict], future_google.result())
             azure_bboxes, _ = cast(tuple[list[BBox], dict], future_azure.result())
+            if self.add_checkboxes:
+                checkbox_bboxes, checkbox_confidences = cast(list[BBox], future_checkbox.result())
 
         # Use the rotation information from google to correctly rotate the image and the bboxes
         google_rotation_angle = google_extra["document_rotation"]
         # google_bboxes = [bbox.rotate(google_rotation_angle) for bbox in google_bboxes]
         azure_bboxes = [bbox.rotate(google_rotation_angle) for bbox in azure_bboxes]
+        if self.add_checkboxes:
+            checkbox_bboxes = [bbox.rotate(google_rotation_angle) for bbox in checkbox_bboxes]
         azure_bboxes = _split_azure_date_boxes(azure_bboxes)
         img = rotate_image(img, google_rotation_angle)
 
@@ -115,8 +126,29 @@ class GoogleAzureOCR:
 
         document_width, document_height = img.size
         combined_bboxes = _merge_bboxes(
-            google_bboxes, azure_bboxes_to_add, document_width=document_width, document_height=document_height
+            google_bboxes,
+            azure_bboxes_to_add,
+            document_width=document_width,
+            document_height=document_height,
         )
+
+        if self.add_checkboxes:
+            # Remove bboxes that have a high overlap with detected checkboxes since sometimes
+            # an x etc. is detected for a checkbox
+            checkbox_overlap_checker = BBoxOverlapChecker(checkbox_bboxes)
+            combined_bboxes = [
+                bbox
+                for bbox in combined_bboxes
+                if len(checkbox_overlap_checker.get_overlapping_bboxes(bbox, threshold=0.5)) == 0
+            ]
+
+            # Merge in the checkbox bboxes
+            combined_bboxes = _merge_bboxes(
+                combined_bboxes,
+                checkbox_bboxes,
+                document_width=document_width,
+                document_height=document_height,
+            )
 
         # Build extra information dict
         extra = {
@@ -214,22 +246,26 @@ class BBoxOverlapChecker:
 
 
 def _merge_bboxes(
-    google_bboxes: list[BBox], azure_bboxes: list[BBox], document_width: int, document_height: int
+    bboxes_a: list[BBox],
+    bboxes_b: list[BBox],
+    document_width: int,
+    document_height: int,
 ) -> list[BBox]:
     """
-    Given the list of google_bboxes as well as azure_bboxes, inserts the azure_bboxes into the google_bboxes list at the correct position.
+    Given the list of bboxes_a as well as bboxes_b, inserts the bboxes_b into the bboxes_a list at the correct position.
 
-    For this, the order of google_bboxes are used as the reference. The position of the azure bboxes are determined by
+    For this, the order of bboxes_a are used as the reference. The position of the bboxes_b are determined by
     merging the two lists and sorting them using the order_bboxes function, which returns indexes of a fully sorted list.
-    This sorting is not used to sort the bboxes, but to determine the position of the azure bboxes in the google_bboxes list.
+    This sorting is not used to sort the bboxes, but to determine the position of the azure bboxes in the bboxes_a list.
     """
-    google_bboxes_idxs = [i for i in range(len(google_bboxes))]
-    azure_bboxes_idxs = [i + len(google_bboxes) for i in range(len(azure_bboxes))]
-    merged_bboxes = google_bboxes + azure_bboxes
+    bboxes_a_idxs = list(range(len(bboxes_a)))
+    bboxes_b_idxs = list(range(len(bboxes_a), len(bboxes_a) + len(bboxes_b)))
+
+    merged_bboxes = bboxes_a + bboxes_b
     sorted_idxs = get_ordered_bboxes_idxs(
         merged_bboxes, document_width=document_width, document_height=document_height
     )
-    merged_bbox_idxs = merge_idx_lists(google_bboxes_idxs, azure_bboxes_idxs, sorted_idxs)
+    merged_bbox_idxs = merge_idx_lists(bboxes_a_idxs, bboxes_b_idxs, sorted_idxs)
     merged_bboxes = [merged_bboxes[i] for i in merged_bbox_idxs]
 
     return merged_bboxes

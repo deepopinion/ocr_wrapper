@@ -6,15 +6,15 @@ from ocr_wrapper.google_document_ocr_checkbox_detector import (
 )
 from PIL import Image
 
-project_id = "1059850693164"
-processor_id = "60d8544ada1705c3"
+PROJECT_ID = "1059850693164"
+PROCESSOR_ID = "60d8544ada1705c3"
 
 
 @pytest.fixture
-def checkbox_detector():
-    return GoogleDocumentOcrCheckboxDetector(
-        project_id=project_id, processor_id=processor_id
-    )
+def checkbox_detector(monkeypatch):
+    monkeypatch.setenv("GOOGLE_DOC_OCR_PROJECT_ID", PROJECT_ID)
+    monkeypatch.setenv("GOOGLE_DOC_OCR_PROCESSOR_ID", PROCESSOR_ID)
+    return GoogleDocumentOcrCheckboxDetector()
 
 
 filedir = os.path.dirname(__file__)

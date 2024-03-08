@@ -6,7 +6,7 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 ### Added
 
 ### Fixed
-- Fixed a problem where not all ocr wrappers accepted the `add_checkboxes` argument. (Checkboxes are still only supported for GoogleAzureOCR, but we prevent execution errors and only a warning will be issued)
+
 ### Changed
 
 ### Removed
@@ -14,6 +14,8 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 ## Release v0.0.19 (2024-03-08)
 ### Added
 - Publishing library to Sonatype Nexus.
+### Fixed
+- Fixed a problem where not all ocr wrappers accepted the `add_checkboxes` argument. (Checkboxes are still only supported for GoogleAzureOCR, but we prevent execution errors and only a warning will be issued)
 
 ## Release v0.0.18 (2024-03-07)
 ### Added

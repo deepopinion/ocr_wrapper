@@ -175,6 +175,7 @@ class GoogleOCR(OcrWrapper):
         auto_rotate: bool = False,
         correct_tilt: bool = True,
         ocr_samples: int = 2,
+        add_checkboxes: bool = False,
         verbose: bool = False,
     ):
         super().__init__(
@@ -184,6 +185,7 @@ class GoogleOCR(OcrWrapper):
             correct_tilt=correct_tilt,
             ocr_samples=ocr_samples,
             supports_multi_samples=True,
+            add_checkboxes=add_checkboxes,
             verbose=verbose,
         )
         # Get credentials from environment variable of the offered default locations

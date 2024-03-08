@@ -44,6 +44,11 @@ def unrotated_bboxes(ocr):
     return ocr.ocr(img)
 
 
+def test_google_ocr_checkbox_detection_gives_warning():
+    with pytest.warns(UserWarning):
+        _ = GoogleOCR(add_checkboxes=True)
+
+
 def test_google_ocr(ocr):
     img = Image.open(os.path.join(DATA_DIR, "ocr_test_big.png"))
 

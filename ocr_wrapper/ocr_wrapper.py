@@ -3,6 +3,7 @@ from __future__ import annotations
 import dbm
 import os
 import shelve
+import warnings
 from abc import ABC, abstractmethod
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from hashlib import sha256
@@ -49,6 +50,7 @@ class OcrWrapper(ABC):
         correct_tilt: bool = True,  # Compensate for small rotations (purely based on image content)
         ocr_samples: int = 2,
         supports_multi_samples: bool = False,
+        add_checkboxes: bool = False,
         verbose: bool = False,
     ):
         if cache_file is None:
@@ -60,6 +62,10 @@ class OcrWrapper(ABC):
         self.ocr_samples = ocr_samples
         self.supports_multi_samples = supports_multi_samples
         self.verbose = verbose
+        self.add_checkboxes = add_checkboxes
+        # Currently only GoogleAzureOCR (which does not inherit from this class) supports checkboxes, so we print a warning if it's enabled
+        if self.add_checkboxes:
+            warnings.warn("Checkbox detection is only supported by GoogleAzureOCR")
         self.shelve_mutex = Lock()  # Mutex to ensure that only one thread is writing to the cache file at a time
 
     def ocr(self, img: Image.Image, return_extra: bool = False) -> Union[list[BBox], tuple[list[BBox], dict]]:

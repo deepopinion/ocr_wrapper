@@ -76,6 +76,7 @@ class AzureOCR(OcrWrapper):
         ocr_samples: int = 1,
         endpoint: Optional[str] = None,
         key: Optional[str] = None,
+        add_checkboxes: bool = False,
         verbose: bool = False,
     ):
         super().__init__(
@@ -85,6 +86,7 @@ class AzureOCR(OcrWrapper):
             correct_tilt=correct_tilt,
             ocr_samples=ocr_samples,
             supports_multi_samples=False,
+            add_checkboxes=add_checkboxes,
             verbose=verbose,
         )
         endpoint, key = _determine_endpoint_and_key(endpoint, key)

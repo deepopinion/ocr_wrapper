@@ -25,8 +25,15 @@ def requires_boto(fn):
 
 class AwsOCR(OcrWrapper):
     @requires_boto
-    def __init__(self, *, cache_file: Optional[str] = None, max_size: Optional[int] = 1024, verbose: bool = False):
-        super().__init__(cache_file=cache_file, max_size=max_size, verbose=verbose)
+    def __init__(
+        self,
+        *,
+        cache_file: Optional[str] = None,
+        max_size: Optional[int] = 1024,
+        add_checkboxes: bool = False,
+        verbose: bool = False
+    ):
+        super().__init__(cache_file=cache_file, max_size=max_size, add_checkboxes=add_checkboxes, verbose=verbose)
         self.client = boto3.client("textract", region_name="eu-central-1")
 
     @requires_boto

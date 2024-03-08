@@ -6,7 +6,7 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 ### Added
 
 ### Fixed
-
+- Fixed a problem where not all ocr wrappers accepted the `add_checkboxes` argument. (Checkboxes are still only supported for GoogleAzureOCR, but we prevent execution errors and only a warning will be issued)
 ### Changed
 
 ### Removed

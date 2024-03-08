@@ -11,6 +11,10 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 
 ### Removed
 
+## Release v0.0.19 (2024-03-08)
+### Added
+- Publishing library to Sonatype Nexus.
+
 ## Release v0.0.18 (2024-03-07)
 ### Added
 - Added checkbox detection with `GoogleDocumentOcrCheckboxDetector` and integrated into `GoogleAzureOCR`

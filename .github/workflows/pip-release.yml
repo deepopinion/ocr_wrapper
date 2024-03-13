@@ -20,18 +20,15 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install wheel twine
+        pip install wheel
         pip install -e .
     # - name: Run tests
     #   run: |
     #     pip install pytest pytest-mock
     #     pytest -m githubtest --disable-warnings ucn/tests
-    - name: Push package to Gemfury and Nexus
+    - name: Push package to Gemfury
       if: success()
       env:
         PIP_PUSH: ${{ secrets.PIP_PUSH }}
-        TWINE_USERNAME: ${{ secrets.NEXUS_USER }}
-        TWINE_PASSWORD: ${{ secrets.NEXUS_PASS }}
-        TWINE_REPOSITORY_URL: https://nexus.do-dev.net/repository/python/
       run: |
         sh devops/deploy.sh

@@ -10,6 +10,7 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 ### Changed
 
 ### Removed
+- No longer publishing to Sonatype Nexus
 
 ## Release v0.0.19 (2024-03-08)
 ### Added

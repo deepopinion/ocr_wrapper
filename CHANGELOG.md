@@ -10,6 +10,7 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 ### Changed
 - Improved warning messages for set arguments of GoogleAzureOCR to be less confusing
 ### Removed
+- No longer publishing to Sonatype Nexus
 
 ## Release v0.0.19 (2024-03-08)
 ### Added

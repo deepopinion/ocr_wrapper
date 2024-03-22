@@ -41,14 +41,16 @@ class GoogleAzureOCR:
         add_checkboxes: bool = False,  # If True, Document OCR by Google is used to detect checkboxes
         verbose: bool = False,
     ):
-        if ocr_samples is not None:
-            print("Warning: ocr_samples is ignored by GoogleAzureOCR")
+        if ocr_samples is not None and ocr_samples != 1:
+            print(
+                "Warning: The argument ocr_samples is ignored by GoogleAzureOCR and can't be set to a value other than 1 or None"
+            )
         if supports_multi_samples:
-            print("Warning: supports_multi_samples is ignored by GoogleAzureOCR")
-        if auto_rotate is not None:
-            print("Warning: auto_rotate is ignored by GoogleAzureOCR")
-        if correct_tilt is not None:
-            print("Warning: correct_tilt is ignored by GoogleAzureOCR")
+            print("Warning: The argument supports_multi_samples is ignored by GoogleAzureOCR and can't be set to True")
+        if auto_rotate == False:
+            print("Warning: The auto_rotate argument is ignored by GoogleAzureOCR and can't be set to False")
+        if correct_tilt == False:
+            print("Warning: The correct_tilt argument is ignored by GoogleAzureOCR and can't be set to False")
 
         if cache_file is None:
             cache_file = os.getenv("OCR_WRAPPER_CACHE_FILE", None)

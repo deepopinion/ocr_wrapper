@@ -8,7 +8,7 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 ### Fixed
 
 ### Changed
-
+- Improved warning messages for set arguments of GoogleAzureOCR to be less confusing
 ### Removed
 
 ## Release v0.0.19 (2024-03-08)

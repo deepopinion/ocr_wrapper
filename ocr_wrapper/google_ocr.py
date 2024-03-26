@@ -22,7 +22,9 @@ def requires_gcloud(fn):
     @functools.wraps(fn)
     def wrapper_decocator(*args, **kwargs):
         if not _has_gcloud:
-            raise ImportError('Google OCR requires missing "google-cloud-vision" package.')
+            raise ImportError(
+                'Google OCR requires missing "google-cloud-vision" package.'
+            )
         return fn(*args, **kwargs)
 
     return wrapper_decocator
@@ -60,12 +62,20 @@ def get_mean_symbol_deltas(response):
                     # Get language code
                     language_code = ""
                     if len(word.property.detected_languages) > 0:
-                        language_code = word.property.detected_languages[0].language_code
+                        language_code = word.property.detected_languages[
+                            0
+                        ].language_code
                     # Calculate deltas
                     first_symbol = word.symbols[0]
                     last_symbol = word.symbols[-1]
-                    xdelta = last_symbol.bounding_box.vertices[1].x - first_symbol.bounding_box.vertices[0].x
-                    ydelta = last_symbol.bounding_box.vertices[1].y - first_symbol.bounding_box.vertices[0].y
+                    xdelta = (
+                        last_symbol.bounding_box.vertices[1].x
+                        - first_symbol.bounding_box.vertices[0].x
+                    )
+                    ydelta = (
+                        last_symbol.bounding_box.vertices[1].y
+                        - first_symbol.bounding_box.vertices[0].y
+                    )
                     # Fix deltas for RTL languages
                     if abs(xdelta) > abs(ydelta):  # Horizontal word orientation
                         if language_code in rtl_languages:
@@ -194,10 +204,14 @@ class GoogleOCR(OcrWrapper):
                 credentials_path = "/credentials.json"
             else:
                 credentials_path = "~/.config/gcloud/credentials.json"
-            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.path.expanduser(credentials_path)
+            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.path.expanduser(
+                credentials_path
+            )
         # Create the client with the specified endpoint
         self.endpoint = endpoint
-        self.client = vision.ImageAnnotatorClient(client_options={"api_endpoint": self.endpoint})
+        self.client = vision.ImageAnnotatorClient(
+            client_options={"api_endpoint": self.endpoint}
+        )
 
     @requires_gcloud
     def _get_ocr_response(self, img: Image.Image):

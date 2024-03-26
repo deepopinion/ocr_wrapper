@@ -4,7 +4,7 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 
 ## Release v0.0.x ()
 ### Added
-
+- Added a heuristic for splitting date ranges (dd.mm.yyyy-dd.mm.yyyy or dd/mm/yyyy-dd/mm/yyyy) that were merged into a single bounding box by GoogleOCR (and thus by GoogleAzureOCR as well), into three distinct bounding boxes.
 ### Fixed
 
 ### Changed

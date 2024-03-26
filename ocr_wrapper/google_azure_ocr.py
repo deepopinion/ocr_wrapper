@@ -18,13 +18,16 @@ import rtree
 from PIL import Image
 
 from ocr_wrapper import AzureOCR, BBox, GoogleOCR
-from ocr_wrapper.google_document_ocr_checkbox_detector import GoogleDocumentOcrCheckboxDetector
+from ocr_wrapper.google_document_ocr_checkbox_detector import (
+    GoogleDocumentOcrCheckboxDetector,
+)
 from ocr_wrapper.ocr_wrapper import rotate_image
 from ocr_wrapper.tilt_correction import correct_tilt
 
 from .bbox_order import get_ordered_bboxes_idxs
-from .bbox_utils import split_bbox
+
 from .utils import get_img_hash
+from .data_clean_utils import split_date_boxes
 
 
 class GoogleAzureOCR:
@@ -46,11 +49,17 @@ class GoogleAzureOCR:
                 "Warning: The argument ocr_samples is ignored by GoogleAzureOCR and can't be set to a value other than 1 or None"
             )
         if supports_multi_samples:
-            print("Warning: The argument supports_multi_samples is ignored by GoogleAzureOCR and can't be set to True")
+            print(
+                "Warning: The argument supports_multi_samples is ignored by GoogleAzureOCR and can't be set to True"
+            )
         if auto_rotate == False:
-            print("Warning: The auto_rotate argument is ignored by GoogleAzureOCR and can't be set to False")
+            print(
+                "Warning: The auto_rotate argument is ignored by GoogleAzureOCR and can't be set to False"
+            )
         if correct_tilt == False:
-            print("Warning: The correct_tilt argument is ignored by GoogleAzureOCR and can't be set to False")
+            print(
+                "Warning: The correct_tilt argument is ignored by GoogleAzureOCR and can't be set to False"
+            )
 
         if cache_file is None:
             cache_file = os.getenv("OCR_WRAPPER_CACHE_FILE", None)
@@ -58,9 +67,13 @@ class GoogleAzureOCR:
         self.max_size = max_size
         self.verbose = verbose
         self.add_checkboxes = add_checkboxes
-        self.shelve_mutex = Lock()  # Mutex to ensure that only one thread is writing to the cache file at a time
+        self.shelve_mutex = (
+            Lock()
+        )  # Mutex to ensure that only one thread is writing to the cache file at a time
 
-    def ocr(self, img: Image.Image, return_extra: bool = False) -> Union[list[BBox], tuple[list[BBox], dict]]:
+    def ocr(
+        self, img: Image.Image, return_extra: bool = False
+    ) -> Union[list[BBox], tuple[list[BBox], dict]]:
         """Runs OCR on an image using both Google and Azure OCR, and combines the results.
 
         Args:
@@ -101,22 +114,30 @@ class GoogleAzureOCR:
             if self.add_checkboxes:
                 future_checkbox = executor.submit(checkbox_ocr.detect_checkboxes, img)
 
-            google_bboxes, google_extra = cast(tuple[list[BBox], dict], future_google.result())
+            google_bboxes, google_extra = cast(
+                tuple[list[BBox], dict], future_google.result()
+            )
             azure_bboxes, _ = cast(tuple[list[BBox], dict], future_azure.result())
             if self.add_checkboxes:
-                checkbox_bboxes, checkbox_confidences = cast(list[BBox], future_checkbox.result())
+                checkbox_bboxes, checkbox_confidences = cast(
+                    list[BBox], future_checkbox.result()
+                )
 
         # Use the rotation information from google to correctly rotate the image and the bboxes
         google_rotation_angle = google_extra["document_rotation"]
         # google_bboxes = [bbox.rotate(google_rotation_angle) for bbox in google_bboxes]
         azure_bboxes = [bbox.rotate(google_rotation_angle) for bbox in azure_bboxes]
         if self.add_checkboxes:
-            checkbox_bboxes = [bbox.rotate(google_rotation_angle) for bbox in checkbox_bboxes]
-        azure_bboxes = _split_azure_date_boxes(azure_bboxes)
+            checkbox_bboxes = [
+                bbox.rotate(google_rotation_angle) for bbox in checkbox_bboxes
+            ]
+        azure_bboxes = split_date_boxes(azure_bboxes)
         img = rotate_image(img, google_rotation_angle)
 
         # Remove unwanted bboxes from Google OCR result
-        google_bboxes = _filter_unwanted_google_bboxes(google_bboxes, width_height_ratio=img.width / img.height)
+        google_bboxes = _filter_unwanted_google_bboxes(
+            google_bboxes, width_height_ratio=img.width / img.height
+        )
 
         # Combine the bboxes from Google and Azure
         bbox_overlap_checker = BBoxOverlapChecker(google_bboxes)
@@ -141,7 +162,10 @@ class GoogleAzureOCR:
             combined_bboxes = [
                 bbox
                 for bbox in combined_bboxes
-                if len(checkbox_overlap_checker.get_overlapping_bboxes(bbox, threshold=0.5)) == 0
+                if len(
+                    checkbox_overlap_checker.get_overlapping_bboxes(bbox, threshold=0.5)
+                )
+                == 0
             ]
 
             # Merge in the checkbox bboxes
@@ -166,7 +190,9 @@ class GoogleAzureOCR:
             result = combined_bboxes
 
         if self.cache_file is not None:
-            self._put_on_shelf(img_hash, return_extra, result)  # Cache result # type: ignore
+            self._put_on_shelf(
+                img_hash, return_extra, result
+            )  # Cache result # type: ignore
         return result
 
     def multi_img_ocr(
@@ -292,10 +318,14 @@ def merge_idx_lists(raw_a, raw_b, sorted_ab):
 
     # Create a map of each element in sorted_ab to the one following it
     # e.g. [1, 2, 3, 4] -> {1: 2, 2: 3, 3: 4}
-    next_sorted_map = {sorted_ab[i]: sorted_ab[i + 1] for i in range(len(sorted_ab) - 1)}
+    next_sorted_map = {
+        sorted_ab[i]: sorted_ab[i + 1] for i in range(len(sorted_ab) - 1)
+    }
 
     # Select the first element to add
-    if sorted_ab[0] in raw_b_set:  # If the first element in sorted_ab is in raw_b, we start with that
+    if (
+        sorted_ab[0] in raw_b_set
+    ):  # If the first element in sorted_ab is in raw_b, we start with that
         last_added = sorted_ab[0]
         raw_b_set.remove(last_added)
     else:  # Otherwise, we start with the first element in raw_a
@@ -307,7 +337,9 @@ def merge_idx_lists(raw_a, raw_b, sorted_ab):
     # Add all the other elements
     while len(raw_a_set) != 0 or len(raw_b_set) != 0:
         next_in_sorted = next_sorted_map.get(last_added, -1)
-        if next_in_sorted in raw_b_set:  # If the next element in sorted_ab is in raw_b, we follow the sorted order ...
+        if (
+            next_in_sorted in raw_b_set
+        ):  # If the next element in sorted_ab is in raw_b, we follow the sorted order ...
             last_added = next_in_sorted
             raw_b_set.remove(last_added)
         else:  # ... otherwise we keep the order given in raw_a
@@ -380,12 +412,16 @@ def _filter_date_boxes(bboxes: list[BBox], max_boxes_range: int = 10) -> list[BB
                 for item in comb:
                     if item in bboxes:
                         bboxes.remove(item)
-                return _filter_date_boxes(bboxes)  # Recursively call to find more matches
+                return _filter_date_boxes(
+                    bboxes
+                )  # Recursively call to find more matches
 
     return bboxes
 
 
-def _filter_unwanted_google_bboxes(bboxes: list[BBox], width_height_ratio: float) -> list[BBox]:
+def _filter_unwanted_google_bboxes(
+    bboxes: list[BBox], width_height_ratio: float
+) -> list[BBox]:
     """Filters out probably incorrect bboxes from the GoogleOCR result.
 
     Currently does the following filtering:
@@ -402,38 +438,9 @@ def _filter_unwanted_google_bboxes(bboxes: list[BBox], width_height_ratio: float
     mean_area = _get_mean_bbox_area(bboxes)
     filtered_bboxes = []
     for bbox in bboxes:
-        if bbox.area() < mean_area or not _bbox_is_vertically_aligned(bbox, width_height_ratio):
+        if bbox.area() < mean_area or not _bbox_is_vertically_aligned(
+            bbox, width_height_ratio
+        ):
             filtered_bboxes.append(bbox)
     filtered_bboxes = _filter_date_boxes(filtered_bboxes)
-    return filtered_bboxes
-
-
-def _split_azure_date_boxes(bboxes: list[BBox]) -> list[BBox]:
-    """
-    Splits date boxes that contain a date range of the format "dd/mm/yyyy - dd/mm/yyyy" into three separate boxes.
-
-    Args:
-        bboxes (list[BBox]): The bboxes to filter.
-
-    Returns:
-        list[BBox]: The filtered bboxes.
-    """
-    date_range_pattern = r"^\s*\d{1,2}\s*/\s*\d{1,2}\s*/\s*\d{4}\s*-\s*\d{1,2}\s*/\s*\d{1,2}\s*/\s*\d{4}\s*$"
-    filtered_bboxes = []
-    for bbox in bboxes:
-        text = bbox.text
-        if text is not None and re.match(date_range_pattern, text):
-            date1, date2 = text.split("-")
-            # Info: The split points have been determined empirically
-            bbox1, bbox2 = split_bbox(bbox, 0.49)
-            bbox1_2, bbox2_2 = split_bbox(bbox2, 0.07)  # Split the second bbox again to get a box for the "-"
-            bbox1.text = date1
-            bbox1_2.text = "-"
-            bbox2_2.text = date2
-            filtered_bboxes.append(bbox1)
-            filtered_bboxes.append(bbox1_2)
-            filtered_bboxes.append(bbox2_2)
-        else:
-            filtered_bboxes.append(bbox)
-
     return filtered_bboxes

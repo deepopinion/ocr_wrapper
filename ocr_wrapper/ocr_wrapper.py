@@ -17,6 +17,7 @@ from .aggregate_multiple_responses import aggregate_ocr_samples, generate_img_sa
 from .bbox import BBox
 from .compat import bboxs2dicts, dicts2bboxs
 from .tilt_correction import correct_tilt
+from .data_clean_utils import split_date_boxes
 
 
 def rotate_image(image: Image.Image, angle: int) -> Image.Image:
@@ -66,9 +67,13 @@ class OcrWrapper(ABC):
         # Currently only GoogleAzureOCR (which does not inherit from this class) supports checkboxes, so we print a warning if it's enabled
         if self.add_checkboxes:
             warnings.warn("Checkbox detection is only supported by GoogleAzureOCR")
-        self.shelve_mutex = Lock()  # Mutex to ensure that only one thread is writing to the cache file at a time
+        self.shelve_mutex = (
+            Lock()
+        )  # Mutex to ensure that only one thread is writing to the cache file at a time
 
-    def ocr(self, img: Image.Image, return_extra: bool = False) -> Union[list[BBox], tuple[list[BBox], dict]]:
+    def ocr(
+        self, img: Image.Image, return_extra: bool = False
+    ) -> Union[list[BBox], tuple[list[BBox], dict]]:
         """Returns OCR result as a list of normalized BBox
 
         Args:
@@ -92,12 +97,17 @@ class OcrWrapper(ABC):
         # Get response from an OCR engine
         if self.ocr_samples == 1 or not self.supports_multi_samples:
             if self.ocr_samples > 1 and self.verbose:
-                print("Warning: This OCR engine does not support multiple samples. Using only one sample.")
+                print(
+                    "Warning: This OCR engine does not support multiple samples. Using only one sample."
+                )
             ocr = self._get_ocr_response(img)
             bboxes, sample_extra = self._convert_ocr_response(ocr)
             # Normalize all boxes
             width, height = img.size
-            bboxes = [bbox.to_normalized(img_width=width, img_height=height) for bbox in bboxes]
+            bboxes = [
+                bbox.to_normalized(img_width=width, img_height=height)
+                for bbox in bboxes
+            ]
         else:
             bboxes, sample_extra = self._get_multi_response(img)
         extra.update(sample_extra)
@@ -112,6 +122,10 @@ class OcrWrapper(ABC):
             extra["rotated_image"] = rotate_image(full_size_img, angle)
             # Rotate boxes. The given rotation will be done counter-clockwise
             bboxes = [bbox.rotate(angle) for bbox in bboxes]
+
+        # Split date-range boxes
+        bboxes, confidences = split_date_boxes(bboxes, extra["confidences"][0])
+        extra["confidences"] = [confidences]
 
         if return_extra:
             return bboxes, extra
@@ -140,14 +154,18 @@ class OcrWrapper(ABC):
             results = cast(list[list[BBox]], results)
             return results
 
-    def _get_multi_response(self, img: Image.Image) -> tuple[list[BBox], dict[str, Any]]:
+    def _get_multi_response(
+        self, img: Image.Image
+    ) -> tuple[list[BBox], dict[str, Any]]:
         """Get OCR response from multiple samples of the same image.
 
         The processing of the individual samples is done in parallel (using threads).
         This does not run on multiple cores, but it is mitigating the latency of calling
         the external OCR engine multiple times.
         """
-        responses: list[tuple[list[BBox], dict[str, Any]] | None] = [None] * self.ocr_samples
+        responses: list[tuple[list[BBox], dict[str, Any]] | None] = [
+            None
+        ] * self.ocr_samples
 
         # Get individual OCR responses in parallel
         def process_sample(i: int):
@@ -159,11 +177,16 @@ class OcrWrapper(ABC):
 
             # Normalize boxes
             width, height = img_sample.size
-            result = [bbox.to_normalized(img_width=width, img_height=height) for bbox in result]
+            result = [
+                bbox.to_normalized(img_width=width, img_height=height)
+                for bbox in result
+            ]
             return result, extra, i
 
         with ThreadPoolExecutor() as executor:
-            futures = {executor.submit(process_sample, i) for i in range(self.ocr_samples)}
+            futures = {
+                executor.submit(process_sample, i) for i in range(self.ocr_samples)
+            }
 
             for future in as_completed(futures):
                 response, extra, i = future.result()
@@ -177,7 +200,9 @@ class OcrWrapper(ABC):
             new_format_response = bboxs2dicts(response, sample_extra.pop("confidences"))
             new_format_responses.append(new_format_response)
             extra["img_samples"].append(sample_extra.pop("img_samples"))
-            extra.update(sample_extra)  # Overwrite extra with the last sample's remaining extra keys
+            extra.update(
+                sample_extra
+            )  # Overwrite extra with the last sample's remaining extra keys
 
         response = aggregate_ocr_samples(new_format_responses, img.size)
 

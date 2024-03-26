@@ -49,17 +49,11 @@ class GoogleAzureOCR:
                 "Warning: The argument ocr_samples is ignored by GoogleAzureOCR and can't be set to a value other than 1 or None"
             )
         if supports_multi_samples:
-            print(
-                "Warning: The argument supports_multi_samples is ignored by GoogleAzureOCR and can't be set to True"
-            )
+            print("Warning: The argument supports_multi_samples is ignored by GoogleAzureOCR and can't be set to True")
         if auto_rotate == False:
-            print(
-                "Warning: The auto_rotate argument is ignored by GoogleAzureOCR and can't be set to False"
-            )
+            print("Warning: The auto_rotate argument is ignored by GoogleAzureOCR and can't be set to False")
         if correct_tilt == False:
-            print(
-                "Warning: The correct_tilt argument is ignored by GoogleAzureOCR and can't be set to False"
-            )
+            print("Warning: The correct_tilt argument is ignored by GoogleAzureOCR and can't be set to False")
 
         if cache_file is None:
             cache_file = os.getenv("OCR_WRAPPER_CACHE_FILE", None)
@@ -67,13 +61,9 @@ class GoogleAzureOCR:
         self.max_size = max_size
         self.verbose = verbose
         self.add_checkboxes = add_checkboxes
-        self.shelve_mutex = (
-            Lock()
-        )  # Mutex to ensure that only one thread is writing to the cache file at a time
+        self.shelve_mutex = Lock()  # Mutex to ensure that only one thread is writing to the cache file at a time
 
-    def ocr(
-        self, img: Image.Image, return_extra: bool = False
-    ) -> Union[list[BBox], tuple[list[BBox], dict]]:
+    def ocr(self, img: Image.Image, return_extra: bool = False) -> Union[list[BBox], tuple[list[BBox], dict]]:
         """Runs OCR on an image using both Google and Azure OCR, and combines the results.
 
         Args:
@@ -114,30 +104,22 @@ class GoogleAzureOCR:
             if self.add_checkboxes:
                 future_checkbox = executor.submit(checkbox_ocr.detect_checkboxes, img)
 
-            google_bboxes, google_extra = cast(
-                tuple[list[BBox], dict], future_google.result()
-            )
+            google_bboxes, google_extra = cast(tuple[list[BBox], dict], future_google.result())
             azure_bboxes, _ = cast(tuple[list[BBox], dict], future_azure.result())
             if self.add_checkboxes:
-                checkbox_bboxes, checkbox_confidences = cast(
-                    list[BBox], future_checkbox.result()
-                )
+                checkbox_bboxes, checkbox_confidences = cast(list[BBox], future_checkbox.result())
 
         # Use the rotation information from google to correctly rotate the image and the bboxes
         google_rotation_angle = google_extra["document_rotation"]
         # google_bboxes = [bbox.rotate(google_rotation_angle) for bbox in google_bboxes]
         azure_bboxes = [bbox.rotate(google_rotation_angle) for bbox in azure_bboxes]
         if self.add_checkboxes:
-            checkbox_bboxes = [
-                bbox.rotate(google_rotation_angle) for bbox in checkbox_bboxes
-            ]
+            checkbox_bboxes = [bbox.rotate(google_rotation_angle) for bbox in checkbox_bboxes]
         azure_bboxes = split_date_boxes(azure_bboxes)
         img = rotate_image(img, google_rotation_angle)
 
         # Remove unwanted bboxes from Google OCR result
-        google_bboxes = _filter_unwanted_google_bboxes(
-            google_bboxes, width_height_ratio=img.width / img.height
-        )
+        google_bboxes = _filter_unwanted_google_bboxes(google_bboxes, width_height_ratio=img.width / img.height)
 
         # Combine the bboxes from Google and Azure
         bbox_overlap_checker = BBoxOverlapChecker(google_bboxes)
@@ -162,10 +144,7 @@ class GoogleAzureOCR:
             combined_bboxes = [
                 bbox
                 for bbox in combined_bboxes
-                if len(
-                    checkbox_overlap_checker.get_overlapping_bboxes(bbox, threshold=0.5)
-                )
-                == 0
+                if len(checkbox_overlap_checker.get_overlapping_bboxes(bbox, threshold=0.5)) == 0
             ]
 
             # Merge in the checkbox bboxes
@@ -190,9 +169,7 @@ class GoogleAzureOCR:
             result = combined_bboxes
 
         if self.cache_file is not None:
-            self._put_on_shelf(
-                img_hash, return_extra, result
-            )  # Cache result # type: ignore
+            self._put_on_shelf(img_hash, return_extra, result)  # Cache result # type: ignore
         return result
 
     def multi_img_ocr(
@@ -318,14 +295,10 @@ def merge_idx_lists(raw_a, raw_b, sorted_ab):
 
     # Create a map of each element in sorted_ab to the one following it
     # e.g. [1, 2, 3, 4] -> {1: 2, 2: 3, 3: 4}
-    next_sorted_map = {
-        sorted_ab[i]: sorted_ab[i + 1] for i in range(len(sorted_ab) - 1)
-    }
+    next_sorted_map = {sorted_ab[i]: sorted_ab[i + 1] for i in range(len(sorted_ab) - 1)}
 
     # Select the first element to add
-    if (
-        sorted_ab[0] in raw_b_set
-    ):  # If the first element in sorted_ab is in raw_b, we start with that
+    if sorted_ab[0] in raw_b_set:  # If the first element in sorted_ab is in raw_b, we start with that
         last_added = sorted_ab[0]
         raw_b_set.remove(last_added)
     else:  # Otherwise, we start with the first element in raw_a
@@ -337,9 +310,7 @@ def merge_idx_lists(raw_a, raw_b, sorted_ab):
     # Add all the other elements
     while len(raw_a_set) != 0 or len(raw_b_set) != 0:
         next_in_sorted = next_sorted_map.get(last_added, -1)
-        if (
-            next_in_sorted in raw_b_set
-        ):  # If the next element in sorted_ab is in raw_b, we follow the sorted order ...
+        if next_in_sorted in raw_b_set:  # If the next element in sorted_ab is in raw_b, we follow the sorted order ...
             last_added = next_in_sorted
             raw_b_set.remove(last_added)
         else:  # ... otherwise we keep the order given in raw_a
@@ -412,16 +383,12 @@ def _filter_date_boxes(bboxes: list[BBox], max_boxes_range: int = 10) -> list[BB
                 for item in comb:
                     if item in bboxes:
                         bboxes.remove(item)
-                return _filter_date_boxes(
-                    bboxes
-                )  # Recursively call to find more matches
+                return _filter_date_boxes(bboxes)  # Recursively call to find more matches
 
     return bboxes
 
 
-def _filter_unwanted_google_bboxes(
-    bboxes: list[BBox], width_height_ratio: float
-) -> list[BBox]:
+def _filter_unwanted_google_bboxes(bboxes: list[BBox], width_height_ratio: float) -> list[BBox]:
     """Filters out probably incorrect bboxes from the GoogleOCR result.
 
     Currently does the following filtering:
@@ -438,9 +405,7 @@ def _filter_unwanted_google_bboxes(
     mean_area = _get_mean_bbox_area(bboxes)
     filtered_bboxes = []
     for bbox in bboxes:
-        if bbox.area() < mean_area or not _bbox_is_vertically_aligned(
-            bbox, width_height_ratio
-        ):
+        if bbox.area() < mean_area or not _bbox_is_vertically_aligned(bbox, width_height_ratio):
             filtered_bboxes.append(bbox)
     filtered_bboxes = _filter_date_boxes(filtered_bboxes)
     return filtered_bboxes

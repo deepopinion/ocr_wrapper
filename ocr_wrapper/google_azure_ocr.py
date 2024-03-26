@@ -18,13 +18,16 @@ import rtree
 from PIL import Image
 
 from ocr_wrapper import AzureOCR, BBox, GoogleOCR
-from ocr_wrapper.google_document_ocr_checkbox_detector import GoogleDocumentOcrCheckboxDetector
+from ocr_wrapper.google_document_ocr_checkbox_detector import (
+    GoogleDocumentOcrCheckboxDetector,
+)
 from ocr_wrapper.ocr_wrapper import rotate_image
 from ocr_wrapper.tilt_correction import correct_tilt
 
 from .bbox_order import get_ordered_bboxes_idxs
-from .bbox_utils import split_bbox
+
 from .utils import get_img_hash
+from .data_clean_utils import split_date_boxes
 
 
 class GoogleAzureOCR:
@@ -112,7 +115,7 @@ class GoogleAzureOCR:
         azure_bboxes = [bbox.rotate(google_rotation_angle) for bbox in azure_bboxes]
         if self.add_checkboxes:
             checkbox_bboxes = [bbox.rotate(google_rotation_angle) for bbox in checkbox_bboxes]
-        azure_bboxes = _split_azure_date_boxes(azure_bboxes)
+        azure_bboxes = split_date_boxes(azure_bboxes)
         img = rotate_image(img, google_rotation_angle)
 
         # Remove unwanted bboxes from Google OCR result
@@ -405,35 +408,4 @@ def _filter_unwanted_google_bboxes(bboxes: list[BBox], width_height_ratio: float
         if bbox.area() < mean_area or not _bbox_is_vertically_aligned(bbox, width_height_ratio):
             filtered_bboxes.append(bbox)
     filtered_bboxes = _filter_date_boxes(filtered_bboxes)
-    return filtered_bboxes
-
-
-def _split_azure_date_boxes(bboxes: list[BBox]) -> list[BBox]:
-    """
-    Splits date boxes that contain a date range of the format "dd/mm/yyyy - dd/mm/yyyy" into three separate boxes.
-
-    Args:
-        bboxes (list[BBox]): The bboxes to filter.
-
-    Returns:
-        list[BBox]: The filtered bboxes.
-    """
-    date_range_pattern = r"^\s*\d{1,2}\s*/\s*\d{1,2}\s*/\s*\d{4}\s*-\s*\d{1,2}\s*/\s*\d{1,2}\s*/\s*\d{4}\s*$"
-    filtered_bboxes = []
-    for bbox in bboxes:
-        text = bbox.text
-        if text is not None and re.match(date_range_pattern, text):
-            date1, date2 = text.split("-")
-            # Info: The split points have been determined empirically
-            bbox1, bbox2 = split_bbox(bbox, 0.49)
-            bbox1_2, bbox2_2 = split_bbox(bbox2, 0.07)  # Split the second bbox again to get a box for the "-"
-            bbox1.text = date1
-            bbox1_2.text = "-"
-            bbox2_2.text = date2
-            filtered_bboxes.append(bbox1)
-            filtered_bboxes.append(bbox1_2)
-            filtered_bboxes.append(bbox2_2)
-        else:
-            filtered_bboxes.append(bbox)
-
     return filtered_bboxes

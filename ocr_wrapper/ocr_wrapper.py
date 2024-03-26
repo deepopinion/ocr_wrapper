@@ -17,6 +17,7 @@ from .aggregate_multiple_responses import aggregate_ocr_samples, generate_img_sa
 from .bbox import BBox
 from .compat import bboxs2dicts, dicts2bboxs
 from .tilt_correction import correct_tilt
+from .data_clean_utils import split_date_boxes
 
 
 def rotate_image(image: Image.Image, angle: int) -> Image.Image:
@@ -112,6 +113,10 @@ class OcrWrapper(ABC):
             extra["rotated_image"] = rotate_image(full_size_img, angle)
             # Rotate boxes. The given rotation will be done counter-clockwise
             bboxes = [bbox.rotate(angle) for bbox in bboxes]
+
+        # Split date-range boxes
+        bboxes, confidences = split_date_boxes(bboxes, extra["confidences"][0])
+        extra["confidences"] = [confidences]
 
         if return_extra:
             return bboxes, extra

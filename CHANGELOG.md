@@ -12,6 +12,10 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 ### Removed
 
 
+## Release v0.0.21 (2024-04-26)
+### Added
+- Started publishing the library to Google Artifact Registry.
+
 ## Release v0.0.20 (2024-03-26)
 ### Added
 - Added a heuristic for splitting date ranges (dd.mm.yyyy-dd.mm.yyyy or dd/mm/yyyy-dd/mm/yyyy) that were merged into a single bounding box by GoogleOCR (and thus by GoogleAzureOCR as well), into three distinct bounding boxes.

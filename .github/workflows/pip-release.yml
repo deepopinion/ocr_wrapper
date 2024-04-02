@@ -7,28 +7,47 @@ on:
 jobs:
   pip-release:
     runs-on: ubuntu-latest
+    env:
+      TWINE_USERNAME: _json_key_base64
+      TWINE_PASSWORD: '${{ secrets.PYTHON_CREDENTIALS }}'
+      TWINE_REPOSITORY: 'https://europe-west1-python.pkg.dev/deepopinion/python-private/'
+      TWINE_REPOSITORY_URL: 'https://europe-west1-python.pkg.dev/deepopinion/python-private/'
     strategy:
       max-parallel: 4
       matrix:
         python-version: ['3.10']
     steps:
-    - uses: actions/checkout@v2
+
+    - name: Check out repository
+      uses: actions/checkout@v4
+
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install wheel
+        pip install wheel twine build
         pip install -e .
+
     # - name: Run tests
     #   run: |
     #     pip install pytest pytest-mock
     #     pytest -m githubtest --disable-warnings ucn/tests
+
     - name: Push package to Gemfury
       if: success()
       env:
         PIP_PUSH: ${{ secrets.PIP_PUSH }}
       run: |
         sh devops/deploy.sh
+
+    - name: Build package
+      run: |
+        rm dist/*
+        python -m build
+
+    - name: Upload package to GAR
+      run: twine upload dist/*

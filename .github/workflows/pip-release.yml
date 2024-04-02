@@ -45,7 +45,9 @@ jobs:
         sh devops/deploy.sh
 
     - name: Build package
-      run: python -m build
+      run: |
+        rm dist/*
+        python -m build
 
     - name: Upload package to GAR
       run: twine upload dist/*

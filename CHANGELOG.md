@@ -12,6 +12,10 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 ### Removed
 
 
+## Release v0.0.22 (2024-04-26)
+### Added
+- Fixing library version.
+
 ## Release v0.0.21 (2024-04-26)
 ### Added
 - Started publishing the library to Google Artifact Registry.

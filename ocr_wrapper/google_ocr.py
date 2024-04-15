@@ -141,8 +141,6 @@ def _correct_bidi_bug(words, languages):
 
     for word, language in zip(words, languages):
         if len(word) > 1 and language == "ar" and not has_arabic_text(word):
-            print(f"Correcting bidi bug for word '{word}'")
-            print(f"New word: '{flip_number_blocks(word)}'")
             new_words.append(flip_number_blocks(word))
         else:
             new_words.append(word)

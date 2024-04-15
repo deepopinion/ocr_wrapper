@@ -6,7 +6,7 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 ### Added
 
 ### Fixed
-
+- Fixed a problem with GoogleOCR returning incorrectly reversed non-arabic strings (e.g. numbers in the form 123-4323-23523-234 in mostly arabic documents)
 ### Changed
 
 ### Removed

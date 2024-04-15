@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import functools
-from time import sleep
 import os
-from typing import Any, Optional, List
+import time
+from time import sleep
+from typing import Any, List, Optional
 
 from PIL import Image
+
 from .bbox import BBox
 from .ocr_wrapper import OcrWrapper
-import time
+from .utils import flip_number_blocks, has_arabic_text
 
 try:
     from google.cloud import vision
@@ -101,26 +103,9 @@ def get_rotation(xmean_delta, ymean_delta):
     return rotation_dict[(xmean_delta, ymean_delta)]
 
 
-def get_word_and_language_codes(response):
-    """Given an ocr response, returns a list of tuples of word and language codes"""
-    word_and_language_codes = []
-    for page in response.full_text_annotation.pages:
-        for block in page.blocks:
-            for paragraph in block.paragraphs:
-                for word in paragraph.words:
-                    if len(word.property.detected_languages) > 0:
-                        word_and_language_codes.append(
-                            (
-                                "".join([s.text for s in word.symbols]),
-                                word.property.detected_languages[0].language_code,
-                            )
-                        )
-    return word_and_language_codes
-
-
 def _get_words_bboxes_confidences(response):
-    """Given an ocr response, returns a list of tuples of word bounding boxes and confidences"""
-    words, bboxes, confidences = [], [], []
+    """Given an ocr response, returns a list of tuples of word bounding boxes and confidences, and the language code"""
+    words, bboxes, confidences, languages = [], [], [], []
 
     for page in response.full_text_annotation.pages:
         for block in page.blocks:
@@ -129,12 +114,40 @@ def _get_words_bboxes_confidences(response):
                     word_text = "".join([symbol.text for symbol in word.symbols])
                     word_confidence = word.confidence
                     word_bounding_box = word.bounding_box.vertices
+                    if len(word.property.detected_languages) == 1:
+                        language = word.property.detected_languages[0].language_code
+                    elif len(word.property.detected_languages) > 1:
+                        print(
+                            f"Warning: More than one language detected for word '{word_text}', language codes: {word.property.detected_languages}"
+                        )
+                        print("Using the first language code")
+                        language = word.property.detected_languages[0].language_code
+                    else:
+                        language = ""
 
                     words.append(word_text)
                     bboxes.append(word_bounding_box)
                     confidences.append(word_confidence)
+                    languages.append(language)
 
-    return words, bboxes, confidences
+    return words, bboxes, confidences, languages
+
+
+def _correct_bidi_bug(words, languages):
+    """
+    Corrects a bug in the Google Cloud Vision API that returns words in the wrong order if they don't contain any arabic characters, but are detected as arabic.
+    """
+    new_words = []
+
+    for word, language in zip(words, languages):
+        if len(word) > 1 and language == "ar" and not has_arabic_text(word):
+            print(f"Correcting bidi bug for word '{word}'")
+            print(f"New word: '{flip_number_blocks(word)}'")
+            new_words.append(flip_number_blocks(word))
+        else:
+            new_words.append(word)
+
+    return new_words
 
 
 class GoogleOCR(OcrWrapper):
@@ -236,7 +249,9 @@ class GoogleOCR(OcrWrapper):
         extra: dict[str, Any] = {}
         confidences = []
 
-        words, verts, confs = _get_words_bboxes_confidences(response)
+        words, verts, confs, languages = _get_words_bboxes_confidences(response)
+
+        words = _correct_bidi_bug(words, languages)
 
         for text, bbox, confidence in zip(words, verts, confs):
             coords = [item for vert in bbox for item in [vert.x, vert.y]]

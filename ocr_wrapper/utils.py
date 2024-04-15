@@ -37,13 +37,22 @@ def has_arabic_text(s: str) -> bool:
 
 def flip_number_blocks(input_string):
     """Reverses the order of digit blocks in a string while keeping non-digit blocks in place."""
-    # Split into parts of digits and non-digits
+    # Split the string into segments of digits and non-digits
     parts = re.split(r"(\D+)", input_string)
-    # Reverse the order of digit parts
+
+    # Filter and reverse the order of the digit-only parts
     digit_parts = [part for part in parts if part.isdigit()]
     reversed_digits = digit_parts[::-1]
 
-    # Reconstruction with the digit parts reversed
-    result = [reversed_digits.pop() if part.isdigit() else part for part in parts]
+    # Reassemble the string with reversed digit blocks and original non-digit separators
+    result = []
+    digit_index = 0
+
+    for part in parts:
+        if part.isdigit():
+            result.append(reversed_digits[digit_index])
+            digit_index += 1
+        else:
+            result.append(part)
 
     return "".join(result)

@@ -11,6 +11,10 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 
 ### Removed
 
+## Release v0.0.24 (2024-04-15)
+### Fixed
+- Provides the correct solution for the fix from v0.0.23 which did not work relyably.
+
 ## Release v0.0.23 (2024-04-15)
 ### Fixed
 - Fixed a problem with GoogleOCR returning incorrectly reversed non-arabic strings (e.g. numbers in the form 123-4323-23523-234 in mostly arabic documents)

@@ -24,7 +24,10 @@ classifiers = [
 [project.optional-dependencies]
 azure = ["azure-cognitiveservices-vision-computervision"]
 
-google = ["google-cloud-vision"]
+google = [
+    "google-cloud-vision",
+    "grpcio!=1.59.*,!=1.60.*,!=1.61.*,!=1.62.0,!=1.62.1", # https://github.com/deepopinion/ocr_wrapper/issues/17
+]
 googleazure = ["ocr_wrapper[google,azure]", "google-cloud-documentai"]
 aws = ["boto3"]
 easy = ["easyocr"]

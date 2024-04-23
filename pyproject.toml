@@ -43,3 +43,4 @@ line-length = 119
 
 [tool.setuptools]
 packages = ["ocr_wrapper"]
+package-data = { ocr_wrapper = ["*.json"]}

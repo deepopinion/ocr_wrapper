@@ -13,12 +13,14 @@ For a usage example, see `tryme.ipynb`.
 ## Requirements
 In addition to the automatically installed requirements, you also need to install the packages needed for the individual OCR solutions. These are not automatically installed, since we don't want to force dependencies which are not really needed if you only use one specific OCR solution.
 
-- Google: `google-cloud-vision`
-- Google Document checkbox detection `google-cloud-documentai`
-- AWS: `boto3`
-- Azure: `azure-cognitiveservices-vision-computervision`
-- PaddleOCR: `paddleocr`
-- EasyOCR: `easyocr`
+Use the following dependency groups to install the required packages for the OCR solutions you want to use:
+
+- Azure: `ocr_wrapper[azure]`
+- Google: `ocr_wrapper[google]`
+- GoogleAzure: `ocr_wrapper[googleazure]` - this also supports checkbox detection
+- AWS: `ocr_wrapper[aws]`
+- EasyOCR: `ocr_wrapper[easy]`
+- PaddleOCR: `ocr_wrapper[paddle]`
 
 Depending on your operating system you might also have to install the Noto Sans font package (e.g. `noto-sans` in Ubuntu)
 

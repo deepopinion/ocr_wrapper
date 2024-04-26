@@ -31,6 +31,7 @@ googleazure = ["ocr_wrapper[google,azure]", "google-cloud-documentai"]
 aws = ["boto3"]
 easy = ["easyocr"]
 paddle = ["paddleocr>=2.0.1"]
+qr_barcodes = ["pyzbar"]
 
 dev = ["black~=24.4", "hypothesis", "pytest"]
 all = ["ocr_wrapper[azure,google,googleazure,aws,easy,paddle]"]

@@ -28,6 +28,7 @@ from .bbox_order import get_ordered_bboxes_idxs
 
 from .utils import get_img_hash
 from .data_clean_utils import split_date_boxes
+from .qr_barcodes import detect_qr_barcodes
 
 
 class GoogleAzureOCR:
@@ -38,10 +39,11 @@ class GoogleAzureOCR:
         cache_file: Optional[str] = None,
         ocr_samples: Optional[int] = None,
         supports_multi_samples: bool = False,
-        max_size: Optional[int] = 4096,
+        max_size: Optional[int] = 2048,
         auto_rotate: Optional[bool] = None,
         correct_tilt: Optional[bool] = None,
         add_checkboxes: bool = False,  # If True, Document OCR by Google is used to detect checkboxes
+        add_qr_barcodes: bool = False,  # If True, QR barcodes are detected and added as BBoxes
         verbose: bool = False,
     ):
         if ocr_samples is not None and ocr_samples != 1:
@@ -61,6 +63,7 @@ class GoogleAzureOCR:
         self.max_size = max_size
         self.verbose = verbose
         self.add_checkboxes = add_checkboxes
+        self.add_qr_barcodes = add_qr_barcodes
         self.shelve_mutex = Lock()  # Mutex to ensure that only one thread is writing to the cache file at a time
 
     def ocr(self, img: Image.Image, return_extra: bool = False) -> Union[list[BBox], tuple[list[BBox], dict]]:
@@ -103,11 +106,15 @@ class GoogleAzureOCR:
             future_azure = executor.submit(azure_ocr.ocr, img, return_extra=True)
             if self.add_checkboxes:
                 future_checkbox = executor.submit(checkbox_ocr.detect_checkboxes, img)
+            if self.add_qr_barcodes:
+                future_qr_barcodes = executor.submit(detect_qr_barcodes, img)
 
             google_bboxes, google_extra = cast(tuple[list[BBox], dict], future_google.result())
             azure_bboxes, _ = cast(tuple[list[BBox], dict], future_azure.result())
             if self.add_checkboxes:
                 checkbox_bboxes, checkbox_confidences = cast(list[BBox], future_checkbox.result())
+            if self.add_qr_barcodes:
+                qr_bboxes = cast(list[BBox], future_qr_barcodes.result())
 
         # Use the rotation information from google to correctly rotate the image and the bboxes
         google_rotation_angle = google_extra["document_rotation"]
@@ -151,6 +158,14 @@ class GoogleAzureOCR:
             combined_bboxes = _merge_bboxes(
                 combined_bboxes,
                 checkbox_bboxes,
+                document_width=document_width,
+                document_height=document_height,
+            )
+
+        if self.add_qr_barcodes:
+            combined_bboxes = _merge_bboxes(
+                combined_bboxes,
+                qr_bboxes,
                 document_width=document_width,
                 document_height=document_height,
             )

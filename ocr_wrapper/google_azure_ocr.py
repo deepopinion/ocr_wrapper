@@ -24,11 +24,10 @@ from ocr_wrapper.google_document_ocr_checkbox_detector import (
 from ocr_wrapper.ocr_wrapper import rotate_image
 from ocr_wrapper.tilt_correction import correct_tilt
 
-from .bbox_order import get_ordered_bboxes_idxs
-
 from .utils import get_img_hash
 from .data_clean_utils import split_date_boxes
 from .qr_barcodes import detect_qr_barcodes
+from .bbox_utils import merge_bbox_lists
 
 
 class GoogleAzureOCR:
@@ -137,7 +136,7 @@ class GoogleAzureOCR:
                 azure_bboxes_to_add.append(bbox)
 
         document_width, document_height = img.size
-        combined_bboxes = _merge_bboxes(
+        combined_bboxes = merge_bbox_lists(
             google_bboxes,
             azure_bboxes_to_add,
             document_width=document_width,
@@ -155,7 +154,7 @@ class GoogleAzureOCR:
             ]
 
             # Merge in the checkbox bboxes
-            combined_bboxes = _merge_bboxes(
+            combined_bboxes = merge_bbox_lists(
                 combined_bboxes,
                 checkbox_bboxes,
                 document_width=document_width,
@@ -163,7 +162,7 @@ class GoogleAzureOCR:
             )
 
         if self.add_qr_barcodes:
-            combined_bboxes = _merge_bboxes(
+            combined_bboxes = merge_bbox_lists(
                 combined_bboxes,
                 qr_bboxes,
                 document_width=document_width,
@@ -263,80 +262,6 @@ class BBoxOverlapChecker:
             ):
                 overlapping_bboxes.append(self.bboxes[i])
         return overlapping_bboxes
-
-
-def _merge_bboxes(
-    bboxes_a: list[BBox],
-    bboxes_b: list[BBox],
-    document_width: int,
-    document_height: int,
-) -> list[BBox]:
-    """
-    Given the list of bboxes_a as well as bboxes_b, inserts the bboxes_b into the bboxes_a list at the correct position.
-
-    For this, the order of bboxes_a are used as the reference. The position of the bboxes_b are determined by
-    merging the two lists and sorting them using the order_bboxes function, which returns indexes of a fully sorted list.
-    This sorting is not used to sort the bboxes, but to determine the position of the azure bboxes in the bboxes_a list.
-    """
-    bboxes_a_idxs = list(range(len(bboxes_a)))
-    bboxes_b_idxs = list(range(len(bboxes_a), len(bboxes_a) + len(bboxes_b)))
-
-    merged_bboxes = bboxes_a + bboxes_b
-    sorted_idxs = get_ordered_bboxes_idxs(
-        merged_bboxes, document_width=document_width, document_height=document_height
-    )
-    merged_bbox_idxs = merge_idx_lists(bboxes_a_idxs, bboxes_b_idxs, sorted_idxs)
-    merged_bboxes = [merged_bboxes[i] for i in merged_bbox_idxs]
-
-    return merged_bboxes
-
-
-def merge_idx_lists(raw_a, raw_b, sorted_ab):
-    """
-    We merge two lists of indexes, raw_a and raw_b, into a single list. The order of the indexes in raw_a follow the
-    order given in raw_a, but elements from raw_b can be inserted in between the elements of raw_a. The order of the
-    elements in raw_b is determined by the order of the elements in sorted_ab.
-    """
-    assert len(raw_a) + len(raw_b) == len(sorted_ab)
-
-    if len(sorted_ab) == 0:
-        return []
-
-    result = []
-    raw_a_set = set(raw_a)
-    raw_b_set = set(raw_b)
-    raw_a_left = raw_a.copy()
-    raw_a_left.reverse()
-
-    # Create a map of each element in sorted_ab to the one following it
-    # e.g. [1, 2, 3, 4] -> {1: 2, 2: 3, 3: 4}
-    next_sorted_map = {sorted_ab[i]: sorted_ab[i + 1] for i in range(len(sorted_ab) - 1)}
-
-    # Select the first element to add
-    if sorted_ab[0] in raw_b_set:  # If the first element in sorted_ab is in raw_b, we start with that
-        last_added = sorted_ab[0]
-        raw_b_set.remove(last_added)
-    else:  # Otherwise, we start with the first element in raw_a
-        last_added = raw_a[0]
-        raw_a_set.remove(last_added)
-        raw_a_left.pop()
-    result.append(last_added)
-
-    # Add all the other elements
-    while len(raw_a_set) != 0 or len(raw_b_set) != 0:
-        next_in_sorted = next_sorted_map.get(last_added, -1)
-        if next_in_sorted in raw_b_set:  # If the next element in sorted_ab is in raw_b, we follow the sorted order ...
-            last_added = next_in_sorted
-            raw_b_set.remove(last_added)
-        else:  # ... otherwise we keep the order given in raw_a
-            last_added = raw_a_left.pop()
-            raw_a_set.remove(last_added)
-
-        result.append(last_added)
-
-    assert len(result) == len(raw_a) + len(raw_b)
-
-    return result
 
 
 def _get_mean_bbox_area(bboxes: list[BBox]) -> float:

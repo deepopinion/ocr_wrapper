@@ -18,6 +18,8 @@ from .bbox import BBox
 from .compat import bboxs2dicts, dicts2bboxs
 from .tilt_correction import correct_tilt
 from .data_clean_utils import split_date_boxes
+from .bbox_utils import merge_bbox_lists_with_confidences
+from .qr_barcodes import detect_qr_barcodes
 
 
 def rotate_image(image: Image.Image, angle: int) -> Image.Image:
@@ -52,6 +54,7 @@ class OcrWrapper(ABC):
         ocr_samples: int = 2,
         supports_multi_samples: bool = False,
         add_checkboxes: bool = False,
+        add_qr_barcodes: bool = False,
         verbose: bool = False,
     ):
         if cache_file is None:
@@ -67,6 +70,7 @@ class OcrWrapper(ABC):
         # Currently only GoogleAzureOCR (which does not inherit from this class) supports checkboxes, so we print a warning if it's enabled
         if self.add_checkboxes:
             warnings.warn("Checkbox detection is only supported by GoogleAzureOCR")
+        self.add_qr_barcodes = add_qr_barcodes
         self.shelve_mutex = Lock()  # Mutex to ensure that only one thread is writing to the cache file at a time
 
     def ocr(self, img: Image.Image, return_extra: bool = False) -> Union[list[BBox], tuple[list[BBox], dict]]:
@@ -115,7 +119,22 @@ class OcrWrapper(ABC):
             bboxes = [bbox.rotate(angle) for bbox in bboxes]
 
         # Split date-range boxes
-        bboxes, confidences = split_date_boxes(bboxes, extra["confidences"][0])
+        confidences = cast(list[float], extra["confidences"][0])
+        bboxes, confidences = split_date_boxes(bboxes, confidences)
+
+        # Detect and add QR and barcodes if needed
+        if self.add_qr_barcodes:
+            qr_barcodes = detect_qr_barcodes(full_size_img)
+            qr_dummy_confidences = [1.0] * len(qr_barcodes)
+            bboxes, confidences = merge_bbox_lists_with_confidences(
+                bboxes,
+                confidences,
+                qr_barcodes,
+                qr_dummy_confidences,
+                document_width=full_size_img.width,
+                document_height=full_size_img.height,
+            )
+
         extra["confidences"] = [confidences]
 
         if return_extra:

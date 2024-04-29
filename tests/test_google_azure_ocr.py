@@ -3,7 +3,7 @@ import os
 import pytest
 from ocr_wrapper import GoogleAzureOCR
 from PIL import Image
-from ocr_wrapper.google_azure_ocr import merge_idx_lists
+from ocr_wrapper.bbox_utils import merge_idx_lists
 
 filedir = os.path.dirname(__file__)
 DATA_DIR = os.path.join(filedir, "data")
@@ -36,7 +36,9 @@ os.environ["GOOGLE_DOC_OCR_PROCESSOR_ID"] = PROCESSOR_ID
 
 @pytest.fixture
 def ocr():
-    return GoogleAzureOCR(ocr_samples=1, correct_tilt=True, auto_rotate=False, add_checkboxes=True)
+    return GoogleAzureOCR(
+        ocr_samples=1, correct_tilt=True, auto_rotate=False, add_checkboxes=True, add_qr_barcodes=True
+    )
 
 
 @pytest.fixture
@@ -58,6 +60,26 @@ def test_google_azure_ocr(ocr):
     text = " ".join([str(r.text) for r in res])
     assert text == "This is a test ."
     assert len(extra["confidences"][0]) == len(res)
+
+
+def test_google_azure_qr(ocr):
+    img = Image.open(os.path.join(DATA_DIR, "qr_code.png"))
+
+    res = ocr.ocr(img, return_extra=False)
+
+    # Assert that one of the returned bboxes is the QR code
+    expected_text = "QRCODE[[http://en.m.wikipedia.org]]"
+    assert any(r.text == expected_text for r in res)
+
+
+def test_google_azure_barcode(ocr):
+    img = Image.open(os.path.join(DATA_DIR, "barcode.png"))
+
+    res = ocr.ocr(img, return_extra=False)
+
+    # Assert that one of the returned bboxes is the barcode
+    expected_text = "CODE39[[WIKIPEDIA]]"
+    assert any(r.text == expected_text for r in res)
 
 
 def test_google_azure_ocr_checkboxes(ocr):

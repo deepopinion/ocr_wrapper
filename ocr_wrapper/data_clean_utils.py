@@ -3,10 +3,18 @@ from __future__ import annotations
 from .bbox import BBox
 import re
 from .bbox_utils import split_bbox
-from typing import Optional
+from typing import overload
 
 
-def split_date_boxes(bboxes: list[BBox], confidences: Optional[list] = None) -> list[BBox]:
+@overload
+def split_date_boxes(bboxes: list[BBox], confidences: None = None) -> list[BBox]: ...
+
+
+@overload
+def split_date_boxes(bboxes: list[BBox], confidences: list[float]) -> tuple[list[BBox], list[float]]: ...
+
+
+def split_date_boxes(bboxes, confidences=None):
     """
     Splits date boxes that contain a date range of the format "dd/mm/yyyy - dd/mm/yyyy" into three separate boxes.
 

@@ -3,7 +3,7 @@ import os
 from unittest.mock import mock_open
 
 import pytest
-from ocr_wrapper import AzureOCR
+from ocr_wrapper import AzureOCR, qr_barcodes
 from ocr_wrapper.azure import _determine_endpoint_and_key, _discretize_angle_to_90_deg
 from PIL import Image
 
@@ -32,7 +32,7 @@ rotation_test_documents = [
 
 @pytest.fixture
 def ocr():
-    return AzureOCR(ocr_samples=1)
+    return AzureOCR(ocr_samples=1, add_qr_barcodes=True)
 
 
 @pytest.fixture
@@ -64,6 +64,16 @@ def test_azure_ocr_single_sample():
     text = " ".join([str(r.text) for r in res])
     assert text == "This is a test."
     assert len(extra["confidences"][0]) == len(res)
+
+
+def test_azure_qr(ocr):
+    img = Image.open(os.path.join(DATA_DIR, "qr_code.png"))
+
+    res = ocr.ocr(img, return_extra=False)
+
+    # Assert that one of the returned bboxes is the QR code
+    expected_text = "QRCODE[[http://en.m.wikipedia.org]]"
+    assert any(r.text == expected_text for r in res)
 
 
 @pytest.mark.parametrize("rotation_angle", [0.5, -2.2, 3.5, -9.5])

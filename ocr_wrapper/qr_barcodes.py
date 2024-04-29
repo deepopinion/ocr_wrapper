@@ -1,17 +1,34 @@
-from pyzbar.pyzbar import decode, Decoded
+import functools
+
+from PIL import Image
+
 from ocr_wrapper.bbox import BBox
-from PIL import Image, ImageFilter
 
-import time
+try:
+    from pyzbar import pyzbar
+except ImportError:
+    _has_pyzbar = False
+else:
+    _has_pyzbar = True
 
 
-def _decoded_to_coordinate_list(decoded: Decoded) -> list[float]:
+def requires_paddle(fn):
+    @functools.wraps(fn)
+    def wrapper_decocator(*args, **kwargs):
+        if not _has_pyzbar:
+            raise ImportError('QR and barcode detection and decoding requires missing "pyzbar" package.')
+        return fn(*args, **kwargs)
+
+    return wrapper_decocator
+
+
+def _decoded_to_coordinate_list(decoded) -> list[float]:
     """Takes a Decoded object and returns a list of coordinates in the format [TLx, TLy, TRx, TRy, BRx, BRy, BLx, BLy]"""
     left, top, width, height = decoded.rect.left, decoded.rect.top, decoded.rect.width, decoded.rect.height
     return [left, top, left + width, top, left + width, top + height, left, top + height]
 
 
-def _decoded_to_ocr_text(decoded: Decoded) -> str:
+def _decoded_to_ocr_text(decoded) -> str:
     """Takes a Decoded object and returns a text that can be used instead of the usual OCR text
 
     The format looks as follows:
@@ -25,7 +42,7 @@ def _decoded_to_ocr_text(decoded: Decoded) -> str:
     return f"{decoded.type}[[{decoded.data.decode('utf-8')}]]"
 
 
-def _decoded_to_bbox(decoded: Decoded) -> BBox:
+def _decoded_to_bbox(decoded) -> BBox:
     """Takes a Decoded object and returns a corresponding BBox object
 
     - Coordinates will be in pixel values
@@ -38,16 +55,17 @@ def _decoded_to_bbox(decoded: Decoded) -> BBox:
     return bbox
 
 
-def _detect_raw_qr_barcodes(image: Image.Image) -> list[Decoded]:
+def _detect_raw_qr_barcodes(image: Image.Image) -> list:
     """Detects barcodes in an image and returns a list of Decoded objects"""
     # Make the image binary black and white to improve detection
     image = image.convert("L")
     image = image.point(lambda x: 0 if x < 128 else 255, "1")
 
-    decoded_objects = decode(image)
+    decoded_objects = pyzbar.decode(image)
     return decoded_objects
 
 
+@requires_paddle
 def detect_qr_barcodes(image: Image.Image) -> list[BBox]:
     """Detects barcodes in an image and returns a list of BBox objects"""
     decoded_objects = _detect_raw_qr_barcodes(image)
@@ -55,5 +73,4 @@ def detect_qr_barcodes(image: Image.Image) -> list[BBox]:
     # Normalize the BBoxes so they are not in pixel coordinates anymore
     width, height = image.size
     bboxes = [bbox.to_normalized(width, height) for bbox in bboxes]
-    print(bboxes)
     return bboxes

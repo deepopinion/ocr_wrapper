@@ -4,12 +4,16 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 
 ## Release v0.0.x ()
 ### Added
-- Added support to detect and decode QR-codes as well as different forms of barcodes to all OCR wrappers. Internally, the zbar library is used. The QR/bar-codes will be added as bounding boxes, and the contained information is returned as the OCR text. The text is formatted in the form `TYPE[[DATA]]` (e.g. `QRCODE[[Encoded Information]]`). Valid types can be found in the `pyzbar.pyzbar.ZBarSymbol` enum. For this to work, the argument `add_qr_barcodes=True` has to be supplied when creating the wrapper (default is `False`) and the `pyzbar` Python library, as well as the zbar system library have to be installed (install ocr_wrapper with the optional dependecy `qr_barcodes`.
+
 ### Fixed
 
 ### Changed
 
 ### Removed
+
+## Release v0.0.26 (2024-04-29)
+### Added
+- Added support to detect and decode QR-codes as well as different forms of barcodes to all OCR wrappers. Internally, the zbar library is used. The QR/bar-codes will be added as bounding boxes, and the contained information is returned as the OCR text. The text is formatted in the form `TYPE[[DATA]]` (e.g. `QRCODE[[Encoded Information]]`). Valid types can be found in the `pyzbar.pyzbar.ZBarSymbol` enum. For this to work, the argument `add_qr_barcodes=True` has to be supplied when creating the wrapper (default is `False`) and the `pyzbar` Python library, as well as the zbar system library have to be installed (install ocr_wrapper with the optional dependecy `qr_barcodes`.
 
 ## Release v0.0.25 (2024-04-23)
 ### Added

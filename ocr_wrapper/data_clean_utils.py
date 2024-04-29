@@ -8,12 +8,8 @@ from typing import overload
 
 @overload
 def split_date_boxes(bboxes: list[BBox], confidences: None = None) -> list[BBox]: ...
-
-
 @overload
 def split_date_boxes(bboxes: list[BBox], confidences: list[float]) -> tuple[list[BBox], list[float]]: ...
-
-
 def split_date_boxes(bboxes, confidences=None):
     """
     Splits date boxes that contain a date range of the format "dd/mm/yyyy - dd/mm/yyyy" into three separate boxes.

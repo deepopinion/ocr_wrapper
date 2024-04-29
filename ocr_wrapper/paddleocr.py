@@ -32,9 +32,16 @@ class PaddleOCR(OcrWrapper):
         cache_file: Optional[str] = None,
         max_size: Optional[int] = 1024,
         add_checkboxes: bool = False,
+        add_qr_barcodes: bool = False,
         verbose: bool = False
     ):
-        super().__init__(cache_file=cache_file, max_size=max_size, add_checkboxes=add_checkboxes, verbose=verbose)
+        super().__init__(
+            cache_file=cache_file,
+            max_size=max_size,
+            add_checkboxes=add_checkboxes,
+            add_qr_barcodes=add_qr_barcodes,
+            verbose=verbose,
+        )
         self.client = paddleocr.PaddleOCR(
             use_angle_cls=True,
             show_log=False,

@@ -51,3 +51,11 @@ Credentials etc. for Azure OCR will be obtained from one of the following (in th
 
 ### GoogleAzureOCR
 Credentials for GoogleOCR as well as AzureOCR have to be set
+
+## Special Functionality
+### QR and Barcode Detection and Decoding
+All OCR wrappers support detection and decoding of QR codes as well as different forms of barcodes. Internally, the [zbar](https://zbar.sourceforge.net/) library is used.
+
+The QR/bar-codes will be added as bounding boxes, and the contained information is returned as the OCR text. The text is formatted in the form `TYPE[[DATA]]` (e.g. `QRCODE[[Encoded Information]]`, `CODE39[[1234567890]]`, ...). All valid types can be found in the `pyzbar.pyzbar.ZBarSymbol` enum.
+
+This has to be activated with the argument `add_qr_barcodes=True` when creating the wrapper (default is `False`). In these cases, the `pyzbar` Python library, as well as the zbar system library have to be installed.

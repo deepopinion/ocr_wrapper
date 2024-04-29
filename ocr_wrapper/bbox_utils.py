@@ -4,11 +4,14 @@ Mainly here for compatibilty with the new ocr_wrapper package.
 """
 
 from __future__ import annotations
+
+import math
 from functools import lru_cache
+
 import rtree
 
 from .bbox import BBox
-import math
+from .bbox_order import get_ordered_bboxes_idxs
 
 
 def _interpolate_point(A: tuple[float, float], B: tuple[float, float], ratio: float) -> tuple[float, float]:
@@ -164,3 +167,111 @@ def group_overlapping_bboxes(bboxes: list[BBox], threshold: float) -> list[list[
             working_bboxes.remove(bbox)
 
     return groups
+
+
+def merge_bbox_lists(
+    bboxes_a: list[BBox],
+    bboxes_b: list[BBox],
+    document_width: int,
+    document_height: int,
+) -> list[BBox]:
+    """
+    Given the list of bboxes_a as well as bboxes_b, inserts the bboxes_b into the bboxes_a list at the correct position.
+
+    For this, the order of bboxes_a are used as the reference. The position of the bboxes_b are determined by
+    merging the two lists and sorting them using the order_bboxes function, which returns indexes of a fully sorted list.
+    This sorting is not used to sort the bboxes, but to determine the position of the azure bboxes in the bboxes_a list.
+    """
+    bboxes_a_idxs = list(range(len(bboxes_a)))
+    bboxes_b_idxs = list(range(len(bboxes_a), len(bboxes_a) + len(bboxes_b)))
+
+    merged_bboxes = bboxes_a + bboxes_b
+    sorted_idxs = get_ordered_bboxes_idxs(
+        merged_bboxes, document_width=document_width, document_height=document_height
+    )
+    merged_bbox_idxs = merge_idx_lists(bboxes_a_idxs, bboxes_b_idxs, sorted_idxs)
+    merged_bboxes = [merged_bboxes[i] for i in merged_bbox_idxs]
+
+    return merged_bboxes
+
+
+def merge_bbox_lists_with_confidences(
+    bboxes_a: list[BBox],
+    confidences_a: list[float],
+    bboxes_b: list[BBox],
+    confidences_b: list[float],
+    document_width: int,
+    document_height: int,
+) -> tuple[list[BBox], list[float]]:
+    """
+    Given the list of bboxes_a as well as bboxes_b, and their corresponding confidences confidences_a and confidences_b, inserts the bboxes_b into the bboxes_a list at the correct position and also returned the merged confidences.
+
+    For this, the order of bboxes_a are used as the reference. The position of the bboxes_b are determined by
+    merging the two lists and sorting them using the order_bboxes function, which returns indexes of a fully sorted list.
+    This sorting is not used to sort the bboxes, but to determine the position of the azure bboxes in the bboxes_a list.
+    """
+    assert len(bboxes_a) == len(confidences_a)
+    assert len(bboxes_b) == len(confidences_b)
+
+    bboxes_a_idxs = list(range(len(bboxes_a)))
+    bboxes_b_idxs = list(range(len(bboxes_a), len(bboxes_a) + len(bboxes_b)))
+
+    merged_bboxes = bboxes_a + bboxes_b
+    merged_confidences = confidences_a + confidences_b
+
+    sorted_idxs = get_ordered_bboxes_idxs(
+        merged_bboxes, document_width=document_width, document_height=document_height
+    )
+    merged_idxs = merge_idx_lists(bboxes_a_idxs, bboxes_b_idxs, sorted_idxs)
+    merged_bboxes = [merged_bboxes[i] for i in merged_idxs]
+    merged_confidences = [merged_confidences[i] for i in merged_idxs]
+
+    return merged_bboxes, merged_confidences
+
+
+def merge_idx_lists(raw_a, raw_b, sorted_ab):
+    """
+    We merge two lists of indexes, raw_a and raw_b, into a single list. The order of the indexes in raw_a follow the
+    order given in raw_a, but elements from raw_b can be inserted in between the elements of raw_a. The order of the
+    elements in raw_b is determined by the order of the elements in sorted_ab.
+    """
+    assert len(raw_a) + len(raw_b) == len(sorted_ab)
+
+    if len(sorted_ab) == 0:
+        return []
+
+    result = []
+    raw_a_set = set(raw_a)
+    raw_b_set = set(raw_b)
+    raw_a_left = raw_a.copy()
+    raw_a_left.reverse()
+
+    # Create a map of each element in sorted_ab to the one following it
+    # e.g. [1, 2, 3, 4] -> {1: 2, 2: 3, 3: 4}
+    next_sorted_map = {sorted_ab[i]: sorted_ab[i + 1] for i in range(len(sorted_ab) - 1)}
+
+    # Select the first element to add
+    if sorted_ab[0] in raw_b_set:  # If the first element in sorted_ab is in raw_b, we start with that
+        last_added = sorted_ab[0]
+        raw_b_set.remove(last_added)
+    else:  # Otherwise, we start with the first element in raw_a
+        last_added = raw_a[0]
+        raw_a_set.remove(last_added)
+        raw_a_left.pop()
+    result.append(last_added)
+
+    # Add all the other elements
+    while len(raw_a_set) != 0 or len(raw_b_set) != 0:
+        next_in_sorted = next_sorted_map.get(last_added, -1)
+        if next_in_sorted in raw_b_set:  # If the next element in sorted_ab is in raw_b, we follow the sorted order ...
+            last_added = next_in_sorted
+            raw_b_set.remove(last_added)
+        else:  # ... otherwise we keep the order given in raw_a
+            last_added = raw_a_left.pop()
+            raw_a_set.remove(last_added)
+
+        result.append(last_added)
+
+    assert len(result) == len(raw_a) + len(raw_b)
+
+    return result

@@ -113,7 +113,7 @@ class GoogleAzureOCR:
             if self.add_checkboxes:
                 checkbox_bboxes, checkbox_confidences = cast(list[BBox], future_checkbox.result())
             if self.add_qr_barcodes:
-                qr_bboxes = cast(list[BBox], future_qr_barcodes.result())
+                qr_bboxes = future_qr_barcodes.result()
 
         # Use the rotation information from google to correctly rotate the image and the bboxes
         google_rotation_angle = google_extra["document_rotation"]

@@ -7,6 +7,7 @@ are added to the final list of bboxes.
 
 from __future__ import annotations
 
+import dbm
 import os
 import re
 import shelve
@@ -210,14 +211,17 @@ class GoogleAzureOCR:
 
     def _get_from_shelf(self, img_hash: str, return_extra: bool):
         """Get a OCR response from the cache, if it exists."""
-        if self.cache_file is not None and os.path.exists(self.cache_file):
+        if self.cache_file is not None:
             hash_str = repr(("googleazure", img_hash, return_extra))
             with self.shelve_mutex:
-                with shelve.open(self.cache_file, "r") as db:
-                    if hash_str in db.keys():  # We have a cached version
-                        if self.verbose:
-                            print(f"Using cached results for hash {hash_str}")
-                        return db[hash_str]
+                try:
+                    with shelve.open(self.cache_file, "r") as db:
+                        if hash_str in db:  # We have a cached version
+                            if self.verbose:
+                                print(f"Using cached results for hash {hash_str}")
+                            return db[hash_str]
+                except dbm.error:
+                    pass  # db could not be opened
 
     def _put_on_shelf(self, img_hash: str, return_extra: bool, response):
         if self.cache_file is not None:

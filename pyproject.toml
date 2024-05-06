@@ -34,7 +34,7 @@ paddle = ["paddleocr>=2.0.1"]
 qr_barcodes = ["pyzbar"]
 
 dev = ["black~=24.4", "hypothesis", "pytest"]
-all = ["ocr_wrapper[azure,google,googleazure,aws,easy,paddle]"]
+all = ["ocr_wrapper[azure,google,googleazure,aws,easy,paddle,qr_barcodes]"]
 
 [build-system]
 requires = ["setuptools>=67.1.0", "wheel>=0.38.4"]

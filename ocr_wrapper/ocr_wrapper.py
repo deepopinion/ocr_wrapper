@@ -21,6 +21,8 @@ from .data_clean_utils import split_date_boxes
 from .bbox_utils import merge_bbox_lists_with_confidences
 from .qr_barcodes import detect_qr_barcodes
 
+OCR_CACHE_DISABLED = object()
+
 
 def rotate_image(image: Image.Image, angle: int) -> Image.Image:
     """
@@ -57,8 +59,11 @@ class OcrWrapper(ABC):
         add_qr_barcodes: bool = False,
         verbose: bool = False,
     ):
-        if cache_file is None:
-            cache_file = os.getenv("OCR_WRAPPER_CACHE_FILE", None)
+        if cache_file == OCR_CACHE_DISABLED:
+            cache_file = None
+        else:
+            cache_file = cache_file or os.getenv("OCR_WRAPPER_CACHE_FILE", None)
+
         self.cache_file = cache_file
         self.max_size = max_size
         self.auto_rotate = auto_rotate

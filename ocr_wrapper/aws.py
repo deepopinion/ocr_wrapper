@@ -1,9 +1,10 @@
 import functools
-from typing import Any, Optional, List
+from typing import Any, List, Optional, Union
 
 from PIL import Image
+
 from .bbox import BBox
-from .ocr_wrapper import OcrWrapper
+from .ocr_wrapper import OcrCacheDisabled, OcrWrapper
 
 try:
     import boto3
@@ -28,7 +29,7 @@ class AwsOCR(OcrWrapper):
     def __init__(
         self,
         *,
-        cache_file: Optional[str] = None,
+        cache_file: Union[None, str, OcrCacheDisabled] = None,
         max_size: Optional[int] = 1024,
         add_checkboxes: bool = False,
         verbose: bool = False

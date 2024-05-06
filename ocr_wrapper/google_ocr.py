@@ -4,12 +4,12 @@ import functools
 import os
 import time
 from time import sleep
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Union
 
 from PIL import Image
 
 from .bbox import BBox
-from .ocr_wrapper import OcrWrapper
+from .ocr_wrapper import OcrCacheDisabled, OcrWrapper
 from .utils import flip_number_blocks, has_arabic_text
 
 try:
@@ -180,7 +180,7 @@ class GoogleOCR(OcrWrapper):
     def __init__(
         self,
         *,
-        cache_file: Optional[str] = None,
+        cache_file: Union[None, str, OcrCacheDisabled] = None,
         max_size: Optional[int] = 1024,
         endpoint: Optional[str] = "eu-vision.googleapis.com",
         auto_rotate: bool = False,

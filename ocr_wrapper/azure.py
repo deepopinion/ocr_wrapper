@@ -4,12 +4,12 @@ import os
 import random
 import time
 from io import BytesIO
-from typing import List, Any, Optional
+from typing import Any, List, Optional
 
 from PIL import Image
 
 from .bbox import BBox
-from .ocr_wrapper import OcrWrapper
+from .ocr_wrapper import OcrCacheDisabled, OcrWrapper, Union
 
 try:
     from msrest.authentication import CognitiveServicesCredentials
@@ -69,7 +69,7 @@ class AzureOCR(OcrWrapper):
     def __init__(
         self,
         *,
-        cache_file: Optional[str] = None,
+        cache_file: Union[None, str, OcrCacheDisabled] = None,
         max_size: Optional[int] = None,
         auto_rotate: bool = False,
         correct_tilt: bool = True,

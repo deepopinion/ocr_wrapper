@@ -1,10 +1,11 @@
 import functools
+from typing import Any, List, Optional, Tuple, Union
+
 import numpy as np
 from PIL import Image
-from typing import Any, Optional, Tuple, List
 
 from .bbox import BBox
-from .ocr_wrapper import OcrWrapper
+from .ocr_wrapper import OcrCacheDisabled, OcrWrapper
 
 try:
     import paddleocr
@@ -29,7 +30,7 @@ class PaddleOCR(OcrWrapper):
     def __init__(
         self,
         *,
-        cache_file: Optional[str] = None,
+        cache_file: Union[None, str, OcrCacheDisabled] = None,
         max_size: Optional[int] = 1024,
         add_checkboxes: bool = False,
         add_qr_barcodes: bool = False,

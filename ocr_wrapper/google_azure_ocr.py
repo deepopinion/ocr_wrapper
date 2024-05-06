@@ -22,7 +22,7 @@ from ocr_wrapper import AzureOCR, BBox, GoogleOCR
 from ocr_wrapper.google_document_ocr_checkbox_detector import (
     GoogleDocumentOcrCheckboxDetector,
 )
-from ocr_wrapper.ocr_wrapper import rotate_image, OCR_CACHE_DISABLED
+from ocr_wrapper.ocr_wrapper import rotate_image, OCR_CACHE_DISABLED, OcrCacheDisabled
 from ocr_wrapper.tilt_correction import correct_tilt
 
 from .utils import get_img_hash
@@ -36,7 +36,7 @@ class GoogleAzureOCR:
 
     def __init__(
         self,
-        cache_file: Optional[str] = None,
+        cache_file: Union[None, str, OcrCacheDisabled] = None,
         ocr_samples: Optional[int] = None,
         supports_multi_samples: bool = False,
         max_size: Optional[int] = 2048,

@@ -7,7 +7,7 @@ import numpy as np
 from PIL import Image
 
 from .bbox import BBox
-from .ocr_wrapper import OcrWrapper
+from .ocr_wrapper import OcrWrapper, OcrCacheDisabled
 
 try:
     import easyocr
@@ -32,7 +32,7 @@ class EasyOCR(OcrWrapper):
     def __init__(
         self,
         *,
-        cache_file: Optional[str] = None,
+        cache_file: Union[None, str, OcrCacheDisabled] = None,
         languages: Union[str, list[str]],
         width_thr: float = 0.5,
         max_size: Optional[int] = 1024,

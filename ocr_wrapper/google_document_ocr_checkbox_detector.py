@@ -102,7 +102,7 @@ class GoogleDocumentOcrCheckboxDetector:
         )
 
     @requires_gcloud
-    def detect_checkboxes(self, page: Union[Image.Image, documentai.RawDocument]) -> list[BBox]:
+    def detect_checkboxes(self, page: Union[Image.Image, documentai.RawDocument]) -> tuple[list[BBox], list[float]]:
         if isinstance(page, Image.Image):
             img_byte_arr = ocr_wrapper.OcrWrapper._pil_img_to_compressed(image=page, compression="webp")
             raw_document = documentai.RawDocument(content=img_byte_arr, mime_type="image/webp")

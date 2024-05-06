@@ -69,7 +69,7 @@ class OcrWrapper(ABC):
         else:
             cache_file = cache_file or os.getenv("OCR_WRAPPER_CACHE_FILE", None)
 
-        self.cache_file = cache_file
+        self.cache_file = cast(Optional[str], cache_file)
         self.max_size = max_size
         self.auto_rotate = auto_rotate
         self.correct_tilt = correct_tilt

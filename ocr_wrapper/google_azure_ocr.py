@@ -57,9 +57,12 @@ class GoogleAzureOCR:
         if correct_tilt == False:
             print("Warning: The correct_tilt argument is ignored by GoogleAzureOCR and can't be set to False")
 
-        if cache_file is None:
-            cache_file = os.getenv("OCR_WRAPPER_CACHE_FILE", None)
-        self.cache_file = cache_file
+        if cache_file == OCR_CACHE_DISABLED:
+            cache_file = None
+        else:
+            cache_file = cache_file or os.getenv("OCR_WRAPPER_CACHE_FILE", None)
+
+        self.cache_file = cast(Optional[str], cache_file)
         self.max_size = max_size
         self.verbose = verbose
         self.add_checkboxes = add_checkboxes

@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from hashlib import sha256
 from io import BytesIO
 from threading import Lock
-from typing import Any, Optional, Union, cast
+from typing import Any, Optional, Union, cast, overload, Literal
 
 from PIL import Image, ImageDraw, ImageOps
 
@@ -83,7 +83,13 @@ class OcrWrapper(ABC):
         self.add_qr_barcodes = add_qr_barcodes
         self.shelve_mutex = Lock()  # Mutex to ensure that only one thread is writing to the cache file at a time
 
-    def ocr(self, img: Image.Image, return_extra: bool = False) -> Union[list[BBox], tuple[list[BBox], dict]]:
+    @overload
+    def ocr(self, img: Image.Image, return_extra: Literal[False]) -> list[BBox]: ...
+    @overload
+    def ocr(self, img: Image.Image, return_extra: Literal[True]) -> tuple[list[BBox], dict]: ...
+    @overload
+    def ocr(self, img: Image.Image, return_extra: bool) -> Union[list[BBox], tuple[list[BBox], dict]]: ...
+    def ocr(self, img: Image.Image, return_extra: bool = False):
         """Returns OCR result as a list of normalized BBox
 
         Args:
@@ -151,9 +157,19 @@ class OcrWrapper(ABC):
             return bboxes, extra
         return bboxes
 
+    @overload
     def multi_img_ocr(
-        self, imgs: list[Image.Image], return_extra: bool = False, max_workers: int = 32
-    ) -> Union[list[list[BBox]], tuple[list[list[BBox]], list[dict]]]:
+        self, imgs: list[Image.Image], return_extra: Literal[False], max_workers: int
+    ) -> list[list[BBox]]: ...
+    @overload
+    def multi_img_ocr(
+        self, imgs: list[Image.Image], return_extra: Literal[True], max_workers: int
+    ) -> tuple[list[list[BBox]], list[dict]]: ...
+    @overload
+    def multi_img_ocr(
+        self, imgs: list[Image.Image], return_extra: bool, max_workers: int
+    ) -> Union[list[list[BBox]], tuple[list[list[BBox]], list[dict]]]: ...
+    def multi_img_ocr(self, imgs: list[Image.Image], return_extra: bool = False, max_workers: int = 32):
         """Returns OCR result for a list of images instead of a single image.
 
         Depending on the specific wrapper, might execute faster than calling ocr() multiple times.
@@ -171,7 +187,6 @@ class OcrWrapper(ABC):
             bboxes, extras = zip(*results)
             return list(bboxes), list(extras)
         else:
-            results = cast(list[list[BBox]], results)
             return results
 
     def _get_multi_response(self, img: Image.Image) -> tuple[list[BBox], dict[str, Any]]:
@@ -206,8 +221,9 @@ class OcrWrapper(ABC):
         # Convert to new format as dicts
         new_format_responses = []
         extra = {"img_samples": []}
-        assert all(r is not None for r in responses)  # All responses should be filled
-        for response, sample_extra in responses:
+        for response_tuple in responses:
+            assert response_tuple is not None
+            response, sample_extra = response_tuple
             new_format_response = bboxs2dicts(response, sample_extra.pop("confidences"))
             new_format_responses.append(new_format_response)
             extra["img_samples"].append(sample_extra.pop("img_samples"))

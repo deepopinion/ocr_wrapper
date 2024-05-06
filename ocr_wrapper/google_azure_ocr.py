@@ -13,22 +13,20 @@ import re
 import shelve
 from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
-from typing import Optional, Union, cast
+from typing import Literal, Optional, Union, cast, overload
 
 import rtree
 from PIL import Image
 
 from ocr_wrapper import AzureOCR, BBox, GoogleOCR
-from ocr_wrapper.google_document_ocr_checkbox_detector import (
-    GoogleDocumentOcrCheckboxDetector,
-)
-from ocr_wrapper.ocr_wrapper import rotate_image, OCR_CACHE_DISABLED, OcrCacheDisabled
+from ocr_wrapper.google_document_ocr_checkbox_detector import GoogleDocumentOcrCheckboxDetector
+from ocr_wrapper.ocr_wrapper import OCR_CACHE_DISABLED, OcrCacheDisabled, rotate_image
 from ocr_wrapper.tilt_correction import correct_tilt
 
-from .utils import get_img_hash
+from .bbox_utils import merge_bbox_lists
 from .data_clean_utils import split_date_boxes
 from .qr_barcodes import detect_qr_barcodes
-from .bbox_utils import merge_bbox_lists
+from .utils import get_img_hash
 
 
 class GoogleAzureOCR:
@@ -69,7 +67,13 @@ class GoogleAzureOCR:
         self.add_qr_barcodes = add_qr_barcodes
         self.shelve_mutex = Lock()  # Mutex to ensure that only one thread is writing to the cache file at a time
 
-    def ocr(self, img: Image.Image, return_extra: bool = False) -> Union[list[BBox], tuple[list[BBox], dict]]:
+    @overload
+    def ocr(self, img: Image.Image, return_extra: Literal[False]) -> list[BBox]: ...
+    @overload
+    def ocr(self, img: Image.Image, return_extra: Literal[True]) -> tuple[list[BBox], dict]: ...
+    @overload
+    def ocr(self, img: Image.Image, return_extra: bool = False) -> Union[list[BBox], tuple[list[BBox], dict]]: ...
+    def ocr(self, img: Image.Image, return_extra: bool = False):
         """Runs OCR on an image using both Google and Azure OCR, and combines the results.
 
         Args:
@@ -114,10 +118,10 @@ class GoogleAzureOCR:
             if self.add_qr_barcodes:
                 future_qr_barcodes = executor.submit(detect_qr_barcodes, img)
 
-            google_bboxes, google_extra = cast(tuple[list[BBox], dict], future_google.result())
-            azure_bboxes, _ = cast(tuple[list[BBox], dict], future_azure.result())
+            google_bboxes, google_extra = future_google.result()
+            azure_bboxes, _ = future_azure.result()
             if self.add_checkboxes:
-                checkbox_bboxes, checkbox_confidences = cast(list[BBox], future_checkbox.result())
+                checkbox_bboxes, _ = future_checkbox.result()
             if self.add_qr_barcodes:
                 qr_bboxes = future_qr_barcodes.result()
 
@@ -192,9 +196,19 @@ class GoogleAzureOCR:
             self._put_on_shelf(img_hash, return_extra, result)  # Cache result # type: ignore
         return result
 
+    @overload
     def multi_img_ocr(
-        self, imgs: list[Image.Image], return_extra: bool = False, max_workers: int = 32
-    ) -> Union[list[list[BBox]], tuple[list[list[BBox]], list[dict]]]:
+        self, imgs: list[Image.Image], return_extra: Literal[False], max_workers: int
+    ) -> list[list[BBox]]: ...
+    @overload
+    def multi_img_ocr(
+        self, imgs: list[Image.Image], return_extra: Literal[True], max_workers: int
+    ) -> tuple[list[list[BBox]], list[dict]]: ...
+    @overload
+    def multi_img_ocr(
+        self, imgs: list[Image.Image], return_extra: bool, max_workers: int
+    ) -> Union[list[list[BBox]], tuple[list[list[BBox]], list[dict]]]: ...
+    def multi_img_ocr(self, imgs: list[Image.Image], return_extra: bool = False, max_workers: int = 32):
         """Runs OCR in parallel on multiple images using both Google and Azure OCR, and combines the results.
 
         Args:
@@ -208,8 +222,11 @@ class GoogleAzureOCR:
             results = [future.result() for future in futures]
 
         if return_extra:
+            bboxes: list[list[BBox]]
+            extras: list[dict]
             bboxes, extras = zip(*results)
-            return list(bboxes), list(extras)
+            return bboxes, extras
+
         else:
             results = cast(list[list[BBox]], results)
             return results

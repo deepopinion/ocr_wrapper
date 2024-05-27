@@ -5,7 +5,9 @@ from ocr_wrapper import GoogleOCR, AzureOCR, GoogleAzureOCR, draw_bboxes
 from ocr_wrapper.compat import bboxs2dicts
 from pdf2image import convert_from_bytes
 from io import BytesIO
+from typing import Type, cast
 
+from ocr_wrapper.ocr_wrapper import OcrWrapper
 import streamlit as st
 from streamlit_profiler import Profiler
 
@@ -44,11 +46,19 @@ st.divider()
 st.markdown("#### OCR Settings")
 ocr_engine = st.selectbox("Select OCR engine", ["Google", "Azure", "GoogleAzure"])
 assert ocr_engine is not None
-ocr_engine_class = {"Google": GoogleOCR, "Azure": AzureOCR, "GoogleAzure": GoogleAzureOCR}[ocr_engine]
+ocr_engine_class = cast(
+    Type[OcrWrapper],
+    {
+        "Google": GoogleOCR,
+        "Azure": AzureOCR,
+        "GoogleAzure": GoogleAzureOCR,
+    }[ocr_engine],
+)
 
 use_ocr_cache = st.checkbox("Use OCR Cache", value=False)
 auto_rotate = st.checkbox("Auto rotate image", value=True)
 tilt_correction = st.checkbox("Tilt correction", value=True)
+checkbox_detection = st.checkbox("Checkbox detection", value=True)
 ocr_samples = st.number_input("Number of OCR samples", min_value=1, max_value=10, value=2)
 max_size = st.slider("Max size of small side of image", min_value=256, max_value=4096, value=1024, step=64)
 dpi = st.slider("DPI", min_value=50, max_value=1000, value=200, step=50)
@@ -89,6 +99,7 @@ if uploaded_file is not None:
         auto_rotate=auto_rotate,
         correct_tilt=tilt_correction,
         max_size=max_size,
+        add_checkboxes=checkbox_detection,
         verbose=True,
     )
 

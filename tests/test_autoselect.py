@@ -6,6 +6,7 @@ from ocr_wrapper import AwsOCR, AzureOCR, EasyOCR, GoogleAzureOCR, GoogleOCR, Pa
 def test_default_ocr_engine(monkeypatch):
     # Unset the OCR_PROVIDER environment variable if set
     monkeypatch.delenv("OCR_PROVIDER", raising=False)
+    monkeypatch.delenv("OCR_PROVIDER_MAPPING", raising=False)
 
     # When OCR_PROVIDER is not set, should default to GoogleOCR
     assert autoselect.autoselect_ocr_engine() is GoogleOCR
@@ -25,6 +26,7 @@ def test_default_ocr_engine(monkeypatch):
 def test_valid_ocr_provider_env_variable_selection(monkeypatch, provider_name, ocr_class):
     # Set the OCR_PROVIDER environment variable to a valid provider
     monkeypatch.setenv("OCR_PROVIDER", provider_name)
+    monkeypatch.delenv("OCR_PROVIDER_MAPPING", raising=False)
 
     # Check if the correct OCR engine is returned
     assert autoselect.autoselect_ocr_engine() is ocr_class
@@ -41,7 +43,8 @@ def test_valid_ocr_provider_env_variable_selection(monkeypatch, provider_name, o
         ("googleazure", GoogleAzureOCR),
     ],
 )
-def test_valid_ocr_provider_argument_selection(provider_name, ocr_class):
+def test_valid_ocr_provider_argument_selection(provider_name, ocr_class, monkeypatch):
+    monkeypatch.delenv("OCR_PROVIDER_MAPPING", raising=False)
     assert autoselect.autoselect_ocr_engine(name=provider_name) is ocr_class
 
 
@@ -59,6 +62,7 @@ def test_invalid_ocr_provider(monkeypatch):
 
 def test_empty_selection_default_to_google(monkeypatch):
     monkeypatch.delenv("OCR_PROVIDER", raising=False)
+    monkeypatch.delenv("OCR_PROVIDER_MAPPING", raising=False)
     assert autoselect.autoselect_ocr_engine() is GoogleOCR
 
 

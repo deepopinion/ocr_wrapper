@@ -6,13 +6,15 @@ import os
 from dataclasses import dataclass
 from functools import lru_cache
 from random import random
-from typing import Optional, Union
+from typing import Optional, TypeVar, Union
 from uuid import uuid4
 
 from PIL import Image, ImageColor, ImageDraw, ImageFont
 from shapely import affinity
-from shapely.geometry import Polygon
 from shapely.errors import GEOSException
+from shapely.geometry import Polygon
+
+T = TypeVar("T")
 
 
 def get_color_with_defined_brightness(color, goal_brightness=0.5):
@@ -683,7 +685,7 @@ def draw_bboxes(
     """
 
     # We support both single values and lists, so we convert everything to lists if needed
-    def singe2list(single):
+    def singe2list(single: Union[T, list[T]]) -> list[T]:
         return [single] * len(bboxes) if not isinstance(single, list) else single
 
     texts = singe2list(texts)
@@ -703,6 +705,7 @@ def draw_bboxes(
 
     # Get font
     fontsize = int((fontsize / 1000) * width)
+    fontsize = max(1, fontsize)  # Prevent fontsize from being 0 which would cause an exception
     absolute_font_path = os.path.join(os.path.dirname(__file__), "NotoSans-Regular.ttf")  # Pillow needs absolute paths
     font = ImageFont.truetype(absolute_font_path, fontsize)
 

@@ -37,7 +37,7 @@ class GoogleAzureOCR:
         cache_file: Union[None, str, OcrCacheDisabled] = None,
         ocr_samples: Optional[int] = None,
         supports_multi_samples: bool = False,
-        max_size: Optional[int] = 2048,
+        max_size: Optional[int] = 4096,
         auto_rotate: Optional[bool] = None,
         correct_tilt: Optional[bool] = None,
         add_checkboxes: bool = False,  # If True, Document OCR by Google is used to detect checkboxes

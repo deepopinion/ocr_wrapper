@@ -4,13 +4,22 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 
 ## Release v0.0.x ()
 ### Added
-- Added a `max_size` argument for `GoogleDocumentOcrCheckboxDetector`
+
 ### Fixed
-- Fixed a bug with checkbox detection if the image is too big by setting a default of `4096` for `max_size` of `GoogleDocumentOcrCheckboxDetector`
-- Increased the `max_size` of `GoogleAzureOCR` to `4096` since we have seen OCR problems with Hannover Re
+
 ### Changed
 
 ### Removed
+
+
+## Release v0.1.0 (2024-05-31)
+Increased to version v0.1.0 instead of v0.0.27 to have space for bugfix releases. This is not a bigger release than v0.0.27 would have been.
+### Added
+- Added a `max_size` argument for `GoogleDocumentOcrCheckboxDetector`
+### Fixed
+- Fixed a bug with checkbox detection if the image is too big by setting a default of `4096` for `max_size` of `GoogleDocumentOcrCheckboxDetector`
+### Changed
+- Increased the `max_size` of `GoogleAzureOCR` to `4096` since we have seen OCR problems with Hannover Re
 
 ## Release v0.0.26 (2024-04-29)
 ### Added

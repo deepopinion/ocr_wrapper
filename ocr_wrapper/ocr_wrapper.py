@@ -9,17 +9,18 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from hashlib import sha256
 from io import BytesIO
 from threading import Lock
-from typing import Any, Optional, Union, cast, overload, Literal
+from typing import Any, Literal, Optional, Union, cast, overload
 
 from PIL import Image, ImageDraw, ImageOps
 
 from .aggregate_multiple_responses import aggregate_ocr_samples, generate_img_sample
 from .bbox import BBox
-from .compat import bboxs2dicts, dicts2bboxs
-from .tilt_correction import correct_tilt
-from .data_clean_utils import split_date_boxes
 from .bbox_utils import merge_bbox_lists_with_confidences
+from .compat import bboxs2dicts, dicts2bboxs
+from .data_clean_utils import split_date_boxes
 from .qr_barcodes import detect_qr_barcodes
+from .tilt_correction import correct_tilt
+from .utils import resize_image
 
 
 class OcrCacheDisabled:
@@ -108,7 +109,7 @@ class OcrWrapper(ABC):
         full_size_img = img.copy()
         # Resize image if needed. If the image is smaller than max_size, it will be returned as is
         if self.max_size is not None:
-            img = self._resize_image(img, self.max_size)
+            img = resize_image(img, self.max_size)
 
         # Get response from an OCR engine
         if self.ocr_samples == 1 or not self.supports_multi_samples:
@@ -235,20 +236,6 @@ class OcrWrapper(ABC):
         response_old_format, new_confidences = dicts2bboxs(response)
         extra["confidences"] = new_confidences
         return response_old_format, extra
-
-    @staticmethod
-    def _resize_image(img: Image.Image, max_size: int) -> Image.Image:
-        """Resize the image to a maximum size, keeping the aspect ratio."""
-        width, height = img.size
-        if width > max_size or height > max_size:
-            if width > height:
-                new_width = max_size
-                new_height = int(max_size * height / width)
-            else:
-                new_height = max_size
-                new_width = int(max_size * width / height)
-            img = img.resize((new_width, new_height), resample=Image.Resampling.LANCZOS)
-        return img
 
     @abstractmethod
     def _get_ocr_response(self, img: Image.Image):

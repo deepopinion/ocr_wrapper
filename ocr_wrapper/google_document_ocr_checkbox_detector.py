@@ -9,6 +9,8 @@ from PIL import Image
 import ocr_wrapper
 from ocr_wrapper import BBox
 
+from .utils import resize_image
+
 try:
     from google.api_core.client_options import ClientOptions
     from google.cloud import documentai
@@ -67,6 +69,7 @@ class GoogleDocumentOcrCheckboxDetector:
         location: Optional[str] = None,
         processor_id: Optional[str] = None,
         processor_version: Optional[str] = None,
+        max_size: Optional[int] = 2048,
     ):
         self.project_id = _val_or_env(project_id, "GOOGLE_DOC_OCR_PROJECT_ID")
         self.location = _val_or_env(location, "GOOGLE_DOC_OCR_LOCATION", default="eu")
@@ -76,6 +79,7 @@ class GoogleDocumentOcrCheckboxDetector:
             "GOOGLE_DOC_OCR_PROCESSOR_VERSION",
             default="pretrained-ocr-v2.0-2023-06-02",
         )
+        self.max_size = max_size
 
         self.process_options = documentai.ProcessOptions(
             ocr_config=documentai.OcrConfig(
@@ -104,6 +108,8 @@ class GoogleDocumentOcrCheckboxDetector:
     @requires_gcloud
     def detect_checkboxes(self, page: Union[Image.Image, documentai.RawDocument]) -> tuple[list[BBox], list[float]]:
         if isinstance(page, Image.Image):
+            if self.max_size is not None:
+                page = resize_image(img=page, max_size=self.max_size)
             img_byte_arr = ocr_wrapper.OcrWrapper._pil_img_to_compressed(image=page, compression="webp")
             raw_document = documentai.RawDocument(content=img_byte_arr, mime_type="image/webp")
         elif isinstance(page, documentai.RawDocument):

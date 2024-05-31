@@ -59,7 +59,7 @@ def flip_number_blocks(input_string):
 
 
 def resize_image(img: Image.Image, max_size: int) -> Image.Image:
-    """Resize the image to a maximum size, keeping the aspect ratio."""
+    """Resize the image so the bigger side has max_size pixels, keeping the aspect ratio."""
     width, height = img.size
     if width > max_size or height > max_size:
         if width > height:

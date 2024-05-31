@@ -69,7 +69,7 @@ class GoogleDocumentOcrCheckboxDetector:
         location: Optional[str] = None,
         processor_id: Optional[str] = None,
         processor_version: Optional[str] = None,
-        max_size: Optional[int] = 2048,
+        max_size: Optional[int] = 4096,
     ):
         self.project_id = _val_or_env(project_id, "GOOGLE_DOC_OCR_PROJECT_ID")
         self.location = _val_or_env(location, "GOOGLE_DOC_OCR_LOCATION", default="eu")

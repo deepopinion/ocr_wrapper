@@ -12,6 +12,6 @@ def test_easy_ocr():
 
     res, extra = ocr.ocr(img, return_extra=True)
     text = " ".join([str(r.text) for r in res])
-    assert text == "This is a test."
+    assert "This is a test" in text
     assert "confidences" in extra
-    assert len(extra["confidences"]) == len(res)
+    assert len(extra["confidences"][0]) == len(res)

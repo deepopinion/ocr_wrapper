@@ -11,6 +11,9 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 
 ### Removed
 
+## Release v0.2.x (2024-07-22)
+### Changed
+- Changed the heuristic to filter out accidentally merged bounding boes of columns of digits in GoogleAzureOCR by changing the heuristic to use the median bbox height instead of the mean bbox area to decide what vertical boxes to filter.
 
 ## Release v0.1.0 (2024-05-31)
 Increased to version v0.1.0 instead of v0.0.27 to have space for bugfix releases. This is not a bigger release than v0.0.27 would have been.

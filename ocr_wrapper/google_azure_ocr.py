@@ -290,18 +290,35 @@ class BBoxOverlapChecker:
         return overlapping_bboxes
 
 
-def _get_mean_bbox_area(bboxes: list[BBox]) -> float:
-    """Returns the mean area of the bboxes in the list
+def _get_box_height(bbox: BBox) -> float:
+    """Returns the height of the bbox
 
     Args:
-        bboxes (list[BBox]): The bboxes to get the mean area of.
+        bbox (BBox): The bbox to get the height of.
 
     Returns:
-        float: The mean area of the bboxes.
+        float: The height of the bbox.
+    """
+    return abs(bbox.BLy - bbox.TLy)
+
+
+def _get_median_box_height(bboxes: list[BBox]) -> float:
+    """Returns the median height of the bboxes in the list
+
+    Args:
+        bboxes (list[BBox]): The bboxes to get the median height of.
+
+    Returns:
+        float: The median height of the bboxes.
     """
     if len(bboxes) == 0:
         return 0.0
-    return sum(bbox.area() for bbox in bboxes) / len(bboxes)
+    heights = [_get_box_height(bbox) for bbox in bboxes]
+    heights.sort()
+    n = len(heights)
+    if n % 2 == 0:
+        return (heights[n // 2 - 1] + heights[n // 2]) / 2
+    return heights[n // 2]
 
 
 def _bbox_is_vertically_aligned(bb: BBox, width_height_ratio: float) -> bool:
@@ -358,7 +375,7 @@ def _filter_unwanted_google_bboxes(bboxes: list[BBox], width_height_ratio: float
     """Filters out probably incorrect bboxes from the GoogleOCR result.
 
     Currently does the following filtering:
-    - Removes bboxes with an area that is bigger than the mean area of all bboxes in the list and that are vertically aligned
+    - Removes bboxes with an area that is bigger than the median area of all bboxes in the list and that are vertically aligned
     - Filters out bounding boxes that, concatenated, match patterns like "dd/mm/yyyy - dd/mm/yyyy".
 
     Args:
@@ -366,12 +383,17 @@ def _filter_unwanted_google_bboxes(bboxes: list[BBox], width_height_ratio: float
         width_height_ratio (float): The width to height ratio of the image.
 
     Returns:
-        list[BBox]: The filtered bboxes.
+        list[BBox]: The bboxes with the filtered out bboxes removed.
     """
-    mean_area = _get_mean_bbox_area(bboxes)
-    filtered_bboxes = []
+    median_height = _get_median_box_height(bboxes)
+    filtered_bboxes: list[BBox] = []
     for bbox in bboxes:
-        if bbox.area() < mean_area or not _bbox_is_vertically_aligned(bbox, width_height_ratio):
+        # Don't include bboxes that are higher than the median height and are vertically aligned
+        # We try to filter out columns of digits that are detected as a single bbox (which happens in GoogleOCR sometimes)
+        if _get_box_height(bbox) > median_height and _bbox_is_vertically_aligned(bbox, width_height_ratio):
+            continue
+        else:
             filtered_bboxes.append(bbox)
+
     filtered_bboxes = _filter_date_boxes(filtered_bboxes)
     return filtered_bboxes

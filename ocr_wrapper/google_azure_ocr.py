@@ -388,12 +388,15 @@ def _filter_unwanted_google_bboxes(bboxes: list[BBox], width_height_ratio: float
     median_height = _get_median_box_height(bboxes)
     filtered_bboxes: list[BBox] = []
     for bbox in bboxes:
-        # Don't include bboxes that are higher than the median height and are vertically aligned
+        # Don't include bboxes that are higher than the median height (+5%) and are vertically aligned
+        # The +5% is to account for cases where all bounding boxes are basically the same height and we don't want to filter
+        # out arbitrary bboxes that just happen to be a bit higher and vertical
         # We try to filter out columns of digits that are detected as a single bbox (which happens in GoogleOCR sometimes)
-        if _get_box_height(bbox) > median_height and _bbox_is_vertically_aligned(bbox, width_height_ratio):
-            continue
-        else:
-            filtered_bboxes.append(bbox)
+        if _get_box_height(bbox) > median_height * 1.05 and _bbox_is_vertically_aligned(bbox, width_height_ratio):
+            # Never filter out single character bboxes
+            if bbox.text is not None and len(bbox.text.strip()) != 1:
+                continue
+        filtered_bboxes.append(bbox)
 
     filtered_bboxes = _filter_date_boxes(filtered_bboxes)
     return filtered_bboxes

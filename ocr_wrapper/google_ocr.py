@@ -203,11 +203,11 @@ class GoogleOCR(OcrWrapper):
         )
         # Get credentials from environment variable of the offered default locations
         if not os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
-            if os.path.isfile("/credentials.json"):
-                credentials_path = "/credentials.json"
-            else:
-                credentials_path = "~/.config/gcloud/credentials.json"
-            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.path.expanduser(credentials_path)
+            for path in ("/credentials.json", "~/.config/gcloud/credentials.json"):
+                full_path = os.path.expanduser(path)
+                if os.path.isfile(full_path):
+                    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = full_path
+                    break
         # Create the client with the specified endpoint
         self.endpoint = endpoint
         self.client = vision.ImageAnnotatorClient(client_options={"api_endpoint": self.endpoint})

@@ -11,7 +11,11 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 
 ### Removed
 
-## Release v0.2.x (2024-07-22)
+## Release v0.2.1 (2024-07-25)
+### Changed
+- GoogleOCR now checks whether the credential file actually exists before setting `GOOGLE_APPLICATION_CREDENTIALS`. If none of the default locations are found, the env var is not set. This enables usage of other authentication schemes (e.g. gcloud CLI, application default credentials).
+
+## Release v0.2.0 (2024-07-22)
 ### Changed
 - Changed the heuristic to filter out accidentally merged bounding boxes of columns of digits in GoogleAzureOCR by changing the heuristic to use the median bbox height instead of the mean bbox area to decide what vertical boxes to filter.
 

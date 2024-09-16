@@ -8,6 +8,7 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 ### Fixed
 
 ### Changed
+- Changed default max_size to 2048 from unlimited to improve OCR speed with edge cases
 
 ### Removed
 

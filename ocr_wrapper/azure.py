@@ -70,7 +70,7 @@ class AzureOCR(OcrWrapper):
         self,
         *,
         cache_file: Union[None, str, OcrCacheDisabled] = None,
-        max_size: Optional[int] = None,
+        max_size: Optional[int] = 2048,
         auto_rotate: bool = False,
         correct_tilt: bool = True,
         ocr_samples: int = 1,

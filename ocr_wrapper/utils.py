@@ -2,6 +2,7 @@ import re
 from hashlib import sha256
 
 from PIL import Image
+from opentelemetry.trace import Span
 
 
 def _get_bytes_hash(_bytes):
@@ -70,3 +71,19 @@ def resize_image(img: Image.Image, max_size: int) -> Image.Image:
             new_width = int(max_size * width / height)
         img = img.resize((new_width, new_height), resample=Image.Resampling.LANCZOS)
     return img
+
+
+def set_image_attributes(span: Span, image: Image.Image) -> None:
+    """
+    Extracts relevant attributes about a PIL image for OpenTelemetry tracing.
+
+    Args:
+        image (Image.Image): The image object from which to extract attributes.
+
+    Returns:
+        Dict[str, str]: A dictionary containing image attributes like mode, format, size, etc.
+    """
+    span.set_attribute("image_size", image.size)
+    span.set_attribute("image_mode", image.mode)
+    span.set_attribute("channel_info", image.getbands())
+    span.set_attribute("image_format", image.format if image.format else "Unknown")

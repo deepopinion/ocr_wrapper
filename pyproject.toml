@@ -14,6 +14,8 @@ dependencies = [
     "torch",
     "torchvision",
     "numpy",
+    "opentelemetry-api",
+    "opentelemetry-sdk"
 ]
 
 classifiers = [

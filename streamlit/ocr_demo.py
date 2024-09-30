@@ -10,6 +10,7 @@ from typing import Type, cast
 from ocr_wrapper.ocr_wrapper import OcrWrapper
 import streamlit as st
 from streamlit_profiler import Profiler
+from space_formatted_text import bboxes2space_formatted_text
 
 import tempfile
 from PIL import Image
@@ -59,8 +60,15 @@ use_ocr_cache = st.checkbox("Use OCR Cache", value=False)
 auto_rotate = st.checkbox("Auto rotate image", value=True)
 tilt_correction = st.checkbox("Tilt correction", value=True)
 checkbox_detection = st.checkbox("Checkbox detection", value=True)
+qr_detection = st.checkbox("QR/barcode code detection", value=True)
 ocr_samples = st.number_input("Number of OCR samples", min_value=1, max_value=10, value=2)
-max_size = st.slider("Max size of small side of image", min_value=256, max_value=4096, value=1024, step=64)
+max_size = st.slider(
+    "Max size of small side of image",
+    min_value=256,
+    max_value=4096,
+    value=1024,
+    step=64,
+)
 dpi = st.slider("DPI", min_value=50, max_value=1000, value=200, step=50)
 
 st.divider()
@@ -73,11 +81,15 @@ output_ocr_text = st.checkbox("Output OCR text at the end")
 show_confidence = st.checkbox("Show confidence (low confidence is a darker blue)")
 confidence_text = st.checkbox("Show confidence as text")
 confidence_threshold = st.slider(
-    "Confidence threshold below which to filter boxes", min_value=0.0, max_value=1.0, value=0.0, step=0.01
+    "Confidence threshold below which to filter boxes",
+    min_value=0.0,
+    max_value=1.0,
+    value=0.0,
+    step=0.01,
 )
 
 
-font_size = st.slider("Font size", min_value=1, max_value=20, value=10, step=1)
+font_size = st.slider("Font size", min_value=1, max_value=50, value=10, step=1)
 
 st.divider()
 
@@ -100,6 +112,7 @@ if uploaded_file is not None:
         correct_tilt=tilt_correction,
         max_size=max_size,
         add_checkboxes=checkbox_detection,
+        add_qr_barcodes=qr_detection,
         verbose=True,
     )
 
@@ -169,13 +182,20 @@ if uploaded_file is not None:
 
             if output_ocr_text:
                 st.write("OCR Text:", " ".join([bbox["text"] for bbox in bboxes]))
-            if "img_samples" in extras:
-                st.markdown("### Image samples")
-                for img_sample in extras["img_samples"]:
-                    if allow_big_images:
-                        st.image(img_sample, width=img_sample.size[0])
-                    else:
-                        st.image(img_sample)
+            # if "img_samples" in extras:
+            #     st.markdown("### Image samples")
+            #     for img_sample in extras["img_samples"]:
+            #         if allow_big_images:
+            #             st.image(img_sample, width=img_sample.size[0])
+            #         else:
+            #             st.image(img_sample)
+
+            img_with, img_height = img.size
+            sft_text = bboxes2space_formatted_text(
+                ocr_bbox_lst=bboxes, document_width=img_with, document_height=img_height
+            )
+
+            st.text(sft_text)
 
     with col2:
         for page in pages:

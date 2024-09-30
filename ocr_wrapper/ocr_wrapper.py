@@ -11,6 +11,7 @@ from io import BytesIO
 from threading import Lock
 from typing import Any, Literal, Optional, Union, cast, overload
 
+from opentelemetry import trace
 from PIL import Image, ImageDraw, ImageOps
 
 from .aggregate_multiple_responses import aggregate_ocr_samples, generate_img_sample
@@ -20,7 +21,9 @@ from .compat import bboxs2dicts, dicts2bboxs
 from .data_clean_utils import split_date_boxes
 from .qr_barcodes import detect_qr_barcodes
 from .tilt_correction import correct_tilt
-from .utils import resize_image
+from .utils import resize_image, set_image_attributes
+
+tracer = trace.get_tracer(__name__)
 
 
 class OcrCacheDisabled:
@@ -36,16 +39,19 @@ def rotate_image(image: Image.Image, angle: int) -> Image.Image:
     Only 0, 90, 180, and 270 degrees are supported. Other angles will raise an Exception.
     """
     # The rotation angles in Pillow are counter-clockwise and ours are clockwise.
-    if angle == 0:
-        return image
-    if angle == 90:
-        return image.transpose(Image.Transpose.ROTATE_90)
-    elif angle == 180:
-        return image.transpose(Image.Transpose.ROTATE_180)
-    elif angle == 270:
-        return image.transpose(Image.Transpose.ROTATE_270)
-    else:
-        raise Exception(f"Unsupported angle: {angle}")
+    with tracer.start_as_current_span("rotate_image") as span:
+        span.set_attribute("angle", angle)
+        span.set_attribute("image_size", image.size)
+        if angle == 0:
+            return image
+        if angle == 90:
+            return image.transpose(Image.Transpose.ROTATE_90)
+        elif angle == 180:
+            return image.transpose(Image.Transpose.ROTATE_180)
+        elif angle == 270:
+            return image.transpose(Image.Transpose.ROTATE_270)
+        else:
+            raise Exception(f"Unsupported angle: {angle}")
 
 
 class OcrWrapper(ABC):
@@ -90,6 +96,7 @@ class OcrWrapper(ABC):
     def ocr(self, img: Image.Image, return_extra: Literal[True]) -> tuple[list[BBox], dict]: ...
     @overload
     def ocr(self, img: Image.Image, return_extra: bool) -> Union[list[BBox], tuple[list[BBox], dict]]: ...
+    @tracer.start_as_current_span(name="OcrWrapper.ocr")
     def ocr(self, img: Image.Image, return_extra: bool = False):
         """Returns OCR result as a list of normalized BBox
 
@@ -97,6 +104,8 @@ class OcrWrapper(ABC):
             img: Image to be processed
             return_extra: If True, returns a tuple of (bboxes, extra) where extra is a dict containing extra information
         """
+        span = trace.get_current_span()
+        set_image_attributes(span, img)
         extra = {}
 
         # Correct tilt (i.e. small rotation)
@@ -104,12 +113,14 @@ class OcrWrapper(ABC):
             img, tilt_angle = correct_tilt(img)
             extra["rotated_image"] = img
             extra["tilt_angle"] = tilt_angle
+            span.set_attribute("tilt_angle", tilt_angle)
 
         # Keep copy of the image in its full size
         full_size_img = img.copy()
         # Resize image if needed. If the image is smaller than max_size, it will be returned as is
         if self.max_size is not None:
             img = resize_image(img, self.max_size)
+            span.set_attribute("resized_image_size", img.size)
 
         # Get response from an OCR engine
         if self.ocr_samples == 1 or not self.supports_multi_samples:
@@ -142,6 +153,7 @@ class OcrWrapper(ABC):
         # Detect and add QR and barcodes if needed
         if self.add_qr_barcodes:
             qr_barcodes = detect_qr_barcodes(full_size_img)
+            span.set_attribute("num_qr_barcodes", len(qr_barcodes))
             qr_dummy_confidences = [1.0] * len(qr_barcodes)
             bboxes, confidences = merge_bbox_lists_with_confidences(
                 bboxes,
@@ -170,6 +182,7 @@ class OcrWrapper(ABC):
     def multi_img_ocr(
         self, imgs: list[Image.Image], return_extra: bool, max_workers: int = ...
     ) -> Union[list[list[BBox]], tuple[list[list[BBox]], list[dict]]]: ...
+    @tracer.start_as_current_span(name="OcrWrapper.multi_img_ocr")
     def multi_img_ocr(self, imgs: list[Image.Image], return_extra: bool = False, max_workers: int = 32):
         """Returns OCR result for a list of images instead of a single image.
 
@@ -180,6 +193,10 @@ class OcrWrapper(ABC):
             return_extra: If True, returns a tuple of (bboxes, extra) where extra is a list of dicts containing extra information
             max_workers: Maximum number of threads to use for parallel processing
         """
+        span = trace.get_current_span()
+        span.set_attribute("num_images", len(imgs))
+        span.set_attribute("max_workers", max_workers)
+
         results = []
         for img in imgs:
             results.append(self.ocr(img, return_extra=return_extra))
@@ -190,6 +207,7 @@ class OcrWrapper(ABC):
         else:
             return results
 
+    @tracer.start_as_current_span(name="OcrWrapper._get_multi_response")
     def _get_multi_response(self, img: Image.Image) -> tuple[list[BBox], dict[str, Any]]:
         """Get OCR response from multiple samples of the same image.
 
@@ -246,9 +264,14 @@ class OcrWrapper(ABC):
         pass
 
     @staticmethod
+    @tracer.start_as_current_span(name="OcrWrapper.draw")
     def draw(image: Image.Image, boxes: list[BBox]):
         """draw the bounding boxes over the original image to visualize result"""
-        image = ImageOps.exif_transpose(image)
+        exif_transpose_image = ImageOps.exif_transpose(image)
+        if exif_transpose_image is None:
+            raise Exception("Failed to exif_transpose image")
+        image = exif_transpose_image
+
         if image.mode != "RGB":
             image = image.convert("RGB")
         draw = ImageDraw.Draw(image)
@@ -262,6 +285,7 @@ class OcrWrapper(ABC):
         return image, " ".join(all_text)
 
     @staticmethod
+    @tracer.start_as_current_span(name="OcrWrapper._pil_img_to_compressed")
     def _pil_img_to_compressed(image: Image.Image, compression: str = "png") -> bytes:
         """Converts a pil image to "compressed" image (e.g. png, webp) in memory"""
         with BytesIO() as output:
@@ -276,6 +300,7 @@ class OcrWrapper(ABC):
             return output.read()
 
     @staticmethod
+    @tracer.start_as_current_span(name="OcrWrapper.get_bytes_hash")
     def _get_bytes_hash(_bytes):
         """Returns the sha256 hash in hex form of a bytes object"""
         h = sha256()
@@ -283,6 +308,7 @@ class OcrWrapper(ABC):
         img_hash = h.hexdigest()
         return img_hash
 
+    @tracer.start_as_current_span(name="OcrWrapper._get_from_shelf")
     def _get_from_shelf(self, img: Image.Image):
         """Get a OCR response from the cache, if it exists."""
         if self.cache_file is not None:
@@ -298,6 +324,7 @@ class OcrWrapper(ABC):
                 except dbm.error:
                     pass  # db could not be opened
 
+    @tracer.start_as_current_span(name="OcrWrapper._put_on_shelf")
     def _put_on_shelf(self, img: Image.Image, response):
         if self.cache_file is not None:
             with self.shelve_mutex:

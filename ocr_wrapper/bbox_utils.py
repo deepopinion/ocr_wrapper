@@ -9,9 +9,12 @@ import math
 from functools import lru_cache
 
 import rtree
+from opentelemetry import trace
 
 from .bbox import BBox
 from .bbox_order import get_ordered_bboxes_idxs
+
+tracer = trace.get_tracer(__name__)
 
 
 def _interpolate_point(A: tuple[float, float], B: tuple[float, float], ratio: float) -> tuple[float, float]:
@@ -169,6 +172,7 @@ def group_overlapping_bboxes(bboxes: list[BBox], threshold: float) -> list[list[
     return groups
 
 
+@tracer.start_as_current_span("merge_bbox_lists")
 def merge_bbox_lists(
     bboxes_a: list[BBox],
     bboxes_b: list[BBox],

@@ -3,9 +3,12 @@ from __future__ import annotations
 import warnings
 
 import torch
+from opentelemetry import trace
 from PIL import Image
 from torchvision.transforms import ToTensor
 from torchvision.transforms.functional import InterpolationMode, rotate
+
+tracer = trace.get_tracer(__name__)
 
 # ---------------- GENERAL IDEA ----------------------------------------------------------------------------------------------
 # We like to find a potential tilt angle a document scan might have picked up.
@@ -335,6 +338,7 @@ def _closest_90_degree_distance(angle: float) -> float:
     return distance
 
 
+@tracer.start_as_current_span("correct_tilt")
 def correct_tilt(image: Image.Image, tilt_threshold: float = 10) -> tuple[Image.Image, float]:
     """
     Corrects the tilt (small rotations) of an image of a document page
@@ -346,6 +350,8 @@ def correct_tilt(image: Image.Image, tilt_threshold: float = 10) -> tuple[Image.
     Returns:
         The rotated image and the angle of rotation
     """
+    span = trace.get_current_span()
+
     detect_tilt = DetectTilt()
     try:
         angle = detect_tilt.find_angle(image)
@@ -353,7 +359,10 @@ def correct_tilt(image: Image.Image, tilt_threshold: float = 10) -> tuple[Image.
         warnings.warn(f"Error while detecting tilt: {e}")
         angle = 0.0
     angle = _closest_90_degree_distance(angle)  # We round to the nearest multiple of 90 degrees
+    span.add_event("Tilt detection completed", attributes={"angle": angle})
+
     # We only rotate if the angle is small enough to prevent bugs introduced by the algorithm
     angle = angle if abs(angle) < tilt_threshold else 0.0
     rotated_image = image.rotate(-angle, expand=True, fillcolor="white")
+
     return rotated_image, angle

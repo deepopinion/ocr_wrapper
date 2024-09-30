@@ -6,13 +6,16 @@ import time
 from io import BytesIO
 from typing import Any, List, Optional
 
+from opentelemetry import trace
 from PIL import Image
 
 from .bbox import BBox
 from .ocr_wrapper import OcrCacheDisabled, OcrWrapper, Union
+from .utils import set_image_attributes
 
 try:
     from msrest.authentication import CognitiveServicesCredentials
+    from msrest.exceptions import ClientRequestError
 
     from azure.cognitiveservices.vision.computervision import ComputerVisionClient
     from azure.cognitiveservices.vision.computervision.models import (
@@ -23,6 +26,8 @@ except ImportError:
     _has_azure = False
 else:
     _has_azure = True
+
+tracer = trace.get_tracer(__name__)
 
 
 def requires_azure(fn):
@@ -95,9 +100,13 @@ class AzureOCR(OcrWrapper):
         self.client = ComputerVisionClient(endpoint, CognitiveServicesCredentials(key))
 
     @requires_azure
+    @tracer.start_as_current_span(name="AzureOCR.get_ocr_response")
     def _get_ocr_response(self, img: Image.Image):
         """Gets the OCR response from the Azure. Uses cached response if a cache file has been specified and the
         document has been OCRed already"""
+        span = trace.get_current_span()
+        set_image_attributes(span, img)
+
         # Try to get cached response
         read_result = self._get_from_shelf(img)
 
@@ -109,40 +118,47 @@ class AzureOCR(OcrWrapper):
             retries = 5
             delay = 0.5
             while retries > 0:
-                try:
-                    img_stream = BytesIO(img_bytes)
-                    read_response = self.client.read_in_stream(img_stream, raw=True)
-                    read_operation_location = read_response.headers["Operation-Location"]
-                    operation_id = read_operation_location.split("/")[-1]
-                except ComputerVisionOcrErrorException as e:  # Usually raised because of too many requests
-                    # Retry with jitter and exponential backoff
-                    jitter_delay = delay * (1 + 0.1 * (1 - 2 * random.random()))
-                    if True:
-                        print("Azure OCR failed with error", e)
-                        print(f"Retrying... {retries} retries left.")
-                        print(f"Jitter delay: {jitter_delay}")
-                    time.sleep(jitter_delay)
-                    delay *= 2
-                    retries -= 1
-                    if retries == 0:
-                        raise
-                else:
-                    break
+                with tracer.start_as_current_span(name="AzureOCR._get_ocr_response.single_try") as span:
+                    try:
+                        img_stream = BytesIO(img_bytes)
+                        read_response = self.client.read_in_stream(img_stream, raw=True)
+                        read_operation_location = read_response.headers["Operation-Location"]
+                        operation_id = read_operation_location.split("/")[-1]
+                    except (
+                        ComputerVisionOcrErrorException,
+                        ClientRequestError,
+                    ) as e:  # Usually raised because of too many requests or timeout
+                        # Retry with jitter and exponential backoff
+                        jitter_delay = delay * (1 + 0.1 * (1 - 2 * random.random()))
+                        if True:
+                            print("Azure OCR failed with error", e)
+                            print(f"Retrying... {retries} retries left.")
+                            print(f"Jitter delay: {jitter_delay}")
+                        time.sleep(jitter_delay)
+                        delay *= 2
+                        retries -= 1
+                        span.add_event(f"Retry Azure OCR", {"delay": jitter_delay, "retries_left": retries})
+                        if retries == 0:
+                            raise
+                    else:
+                        break
 
-            while True:
-                read_result = self.client.get_read_result(operation_id)
-                if read_result.status not in ["notStarted", "running"]:
-                    break
-                time.sleep(0.1)
-            if read_result.status != OperationStatusCodes.succeeded:
-                raise Exception("Azure operation returned error")
-            end = time.time()
-            if self.verbose:
-                print("Azure OCR took ", end - start, "seconds")
-            self._put_on_shelf(img, read_result)
+                while True:
+                    with tracer.start_as_current_span(name="AzureOCR._get_ocr_response.get_read_result") as span:
+                        read_result = self.client.get_read_result(operation_id)
+                        if read_result.status not in ["notStarted", "running"]:
+                            break
+                        time.sleep(0.1)
+                if read_result.status != OperationStatusCodes.succeeded:
+                    raise Exception("Azure operation returned error")
+                end = time.time()
+                if self.verbose:
+                    print("Azure OCR took ", end - start, "seconds")
+                self._put_on_shelf(img, read_result)
         return read_result
 
     @requires_azure
+    @tracer.start_as_current_span(name="AzureOCR._convert_ocr_response")
     def _convert_ocr_response(self, response) -> tuple[List[BBox], dict[str, Any]]:
         """Converts the response given by Azure Read to a list of BBox"""
         bboxes = []

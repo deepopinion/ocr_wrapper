@@ -4,11 +4,11 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 
 ## Release v0.0.x ()
 ### Added
-
+- Added OpenTelemetry to `GoogleAzureOCR`, `GoogleOCR`, `AzureOCR`, and `OcrWrapper` to enable tracing of the OCR process
 ### Fixed
 
 ### Changed
-- Changed default max_size to 2048 from unlimited to improve OCR speed with edge cases
+- Changed default max_size of AzureOCR to 2048 from unlimited to improve OCR speed with edge cases
 
 ### Removed
 

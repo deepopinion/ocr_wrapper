@@ -75,13 +75,12 @@ def resize_image(img: Image.Image, max_size: int) -> Image.Image:
 
 def set_image_attributes(span: Span, image: Image.Image) -> None:
     """
-    Extracts relevant attributes about a PIL image for OpenTelemetry tracing.
+    Assigns specific attributes of an image to a span for tracing purposes.
 
-    Args:
-        image (Image.Image): The image object from which to extract attributes.
-
-    Returns:
-        Dict[str, str]: A dictionary containing image attributes like mode, format, size, etc.
+    Parameters:
+    span (Span): The span object to which image attributes will be assigned.
+    image (Image.Image): The image from which attributes like size, mode, channel information,
+                         and format will be extracted and set on the span.
     """
     span.set_attribute("image_size", image.size)
     span.set_attribute("image_mode", image.mode)

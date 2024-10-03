@@ -199,6 +199,7 @@ def merge_bbox_lists(
     return merged_bboxes
 
 
+@tracer.start_as_current_span("merge_bbox_lists_with_confidences")
 def merge_bbox_lists_with_confidences(
     bboxes_a: list[BBox],
     confidences_a: list[float],

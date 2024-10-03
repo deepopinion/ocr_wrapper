@@ -144,18 +144,18 @@ class AzureOCR(OcrWrapper):
                     else:
                         break
 
-                while True:
-                    with tracer.start_as_current_span(name="AzureOCR._get_ocr_response.get_read_result") as span:
-                        read_result = self.client.get_read_result(operation_id)
-                        if read_result.status not in ["notStarted", "running"]:
-                            break
-                        time.sleep(0.1)
-                if read_result.status != OperationStatusCodes.succeeded:
-                    raise Exception("Azure operation returned error")
-                end = time.time()
-                if self.verbose:
-                    print("Azure OCR took ", end - start, "seconds")
-                self._put_on_shelf(img, read_result)
+            while True:
+                with tracer.start_as_current_span(name="AzureOCR._get_ocr_response.get_read_result") as span:
+                    read_result = self.client.get_read_result(operation_id)
+                    if read_result.status not in ["notStarted", "running"]:
+                        break
+                    time.sleep(0.1)
+            if read_result.status != OperationStatusCodes.succeeded:
+                raise Exception("Azure operation returned error")
+            end = time.time()
+            if self.verbose:
+                print("Azure OCR took ", end - start, "seconds")
+            self._put_on_shelf(img, read_result)
         return read_result
 
     @requires_azure

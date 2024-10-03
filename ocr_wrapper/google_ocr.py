@@ -6,11 +6,14 @@ import time
 from time import sleep
 from typing import Any, List, Optional, Union
 
+from opentelemetry import trace
 from PIL import Image
 
 from .bbox import BBox
 from .ocr_wrapper import OcrCacheDisabled, OcrWrapper
-from .utils import flip_number_blocks, has_arabic_text
+from .utils import flip_number_blocks, has_arabic_text, set_image_attributes
+
+tracer = trace.get_tracer(__name__)
 
 try:
     from google.cloud import vision
@@ -47,6 +50,7 @@ rtl_languages = [
 ]
 
 
+@tracer.start_as_current_span(name="get_mean_symbol_deltas")
 def get_mean_symbol_deltas(response):
     """Given an ocr response, calculates the mean x and y deltas for the first and last symbol in all the words.
 
@@ -86,6 +90,7 @@ def get_mean_symbol_deltas(response):
     return xmean_delta, ymean_delta
 
 
+@tracer.start_as_current_span(name="get_rotation")
 def get_rotation(xmean_delta, ymean_delta):
     """Given the mean x and y deltas, calculates the rotation of the text at 0, 90, 180, or 270 degrees
 
@@ -103,6 +108,7 @@ def get_rotation(xmean_delta, ymean_delta):
     return rotation_dict[(xmean_delta, ymean_delta)]
 
 
+@tracer.start_as_current_span(name="get_words_bboxes_confidences")
 def _get_words_bboxes_confidences(response):
     """Given an ocr response, returns a list of tuples of word bounding boxes and confidences, and the language code"""
     words, bboxes, confidences, languages = [], [], [], []
@@ -133,6 +139,7 @@ def _get_words_bboxes_confidences(response):
     return words, bboxes, confidences, languages
 
 
+@tracer.start_as_current_span(name="correct_bidi_bug")
 def _correct_bidi_bug(words, languages):
     """
     Corrects a bug in the Google Cloud Vision API that returns words in the wrong order if they don't contain any arabic characters, but are detected as arabic.
@@ -213,9 +220,13 @@ class GoogleOCR(OcrWrapper):
         self.client = vision.ImageAnnotatorClient(client_options={"api_endpoint": self.endpoint})
 
     @requires_gcloud
+    @tracer.start_as_current_span(name="GoogleOCR._get_ocr")
     def _get_ocr_response(self, img: Image.Image):
         """Gets the OCR response from the Google cloud. Uses cached response if a cache file has been specified and the
         document has been OCRed already"""
+        span = trace.get_current_span()
+        set_image_attributes(span, img)
+
         # Pack image in correct format
         img_bytes = self._pil_img_to_compressed(img, compression="webp")
         vision_img = vision.Image(content=img_bytes)
@@ -226,23 +237,28 @@ class GoogleOCR(OcrWrapper):
             # client loses connection
             nb_repeats = 2  # Try to repeat twice before failing
             while True:
-                try:
-                    start = time.time()
-                    response = self.client.document_text_detection(image=vision_img)
-                    end = time.time()
-                    if self.verbose:
-                        print(f"Google OCR took {end - start} seconds")
-                    break
-                except Exception as e:
-                    if nb_repeats == 0:
-                        raise
-                    nb_repeats -= 1
-                    sleep(1.0)
-                    print(f"Warning: Google OCR failed, with {e}")
+                with tracer.start_as_current_span(name="GoogleOCR._get_ocr_response.single_try") as span:
+                    try:
+                        start = time.time()
+                        response = self.client.document_text_detection(image=vision_img)
+                        end = time.time()
+                        if self.verbose:
+                            print(f"Google OCR took {end - start} seconds")
+                        break
+                    except Exception as e:
+                        span.record_exception(e, escaped=False)
+                        if nb_repeats == 0:
+                            raise
+                        nb_repeats -= 1
+                        delay = 1.0
+                        span.add_event(f"Retry Google OCR", {"delay": delay, "retries_left": nb_repeats})
+                        sleep(delay)
+                        print(f"Warning: Google OCR failed, with {e}")
             self._put_on_shelf(img, response)
         return response
 
     @requires_gcloud
+    @tracer.start_as_current_span(name="GoogleOCR._convert_ocr_response")
     def _convert_ocr_response(self, response) -> tuple[List[BBox], dict[str, Any]]:
         """Converts the response given by Google OCR to a list of BBox"""
         bboxes = []

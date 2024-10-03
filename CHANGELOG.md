@@ -11,6 +11,14 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 
 ### Removed
 
+## Release v0.2.2 (2024-10-03)
+### Added
+- Added OpenTelemetry to `GoogleAzureOCR`, `GoogleOCR`, `AzureOCR`, and `OcrWrapper` to enable tracing of the OCR process
+### Fixed
+- Fixed a problem where exceeding the request limit did not lead to the request being retried in `AzureOCR`
+### Changed
+- Changed default max_size of AzureOCR to 2048 from unlimited to improve OCR speed with edge cases
+
 ## Release v0.2.1 (2024-07-25)
 ### Changed
 - GoogleOCR now checks whether the credential file actually exists before setting `GOOGLE_APPLICATION_CREDENTIALS`. If none of the default locations are found, the env var is not set. This enables usage of other authentication schemes (e.g. gcloud CLI, application default credentials).

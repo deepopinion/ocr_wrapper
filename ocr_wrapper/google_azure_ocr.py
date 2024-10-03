@@ -16,6 +16,7 @@ from threading import Lock
 from typing import Literal, Optional, Union, cast, overload
 
 import rtree
+from opentelemetry import trace
 from PIL import Image
 
 from ocr_wrapper import AzureOCR, BBox, GoogleOCR
@@ -26,7 +27,9 @@ from ocr_wrapper.tilt_correction import correct_tilt
 from .bbox_utils import merge_bbox_lists
 from .data_clean_utils import split_date_boxes
 from .qr_barcodes import detect_qr_barcodes
-from .utils import get_img_hash
+from .utils import get_img_hash, set_image_attributes
+
+tracer = trace.get_tracer(__name__)
 
 
 class GoogleAzureOCR:
@@ -73,6 +76,8 @@ class GoogleAzureOCR:
     def ocr(self, img: Image.Image, return_extra: Literal[True]) -> tuple[list[BBox], dict]: ...
     @overload
     def ocr(self, img: Image.Image, return_extra: bool = False) -> Union[list[BBox], tuple[list[BBox], dict]]: ...
+
+    @tracer.start_as_current_span(name="GoogleAzureOCR.ocr")
     def ocr(self, img: Image.Image, return_extra: bool = False):
         """Runs OCR on an image using both Google and Azure OCR, and combines the results.
 
@@ -80,11 +85,15 @@ class GoogleAzureOCR:
             img (Image.Image): The image to run OCR on.
             return_extra (bool, optional): Whether to return extra information. Defaults to False.
         """
+        span = trace.get_current_span()
+        set_image_attributes(span, img)
+
         # Return cached result if it exists
         if self.cache_file is not None:
             img_hash = get_img_hash(img)
             cached = self._get_from_shelf(img_hash, return_extra)
             if cached is not None:
+                span.add_event("Using cached results")
                 return cached
 
         google_ocr = GoogleOCR(
@@ -108,26 +117,33 @@ class GoogleAzureOCR:
 
         # Do the tilt angle correction ourselves externally to have consistend input to Google and Azure
         img, tilt_angle = correct_tilt(img)
+        span.set_attribute("tilt_angle", tilt_angle)
 
         # Run Google OCR and Azure OCR in parallel via theadpool
-        with ThreadPoolExecutor(max_workers=2) as executor:
-            future_google = executor.submit(google_ocr.ocr, img, return_extra=True)
-            future_azure = executor.submit(azure_ocr.ocr, img, return_extra=True)
-            if self.add_checkboxes:
-                future_checkbox = executor.submit(checkbox_ocr.detect_checkboxes, img)
-            if self.add_qr_barcodes:
-                future_qr_barcodes = executor.submit(detect_qr_barcodes, img)
+        with tracer.start_as_current_span(name="GoogleAzureOCR.ocr.threadpool") as span:
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                future_google = executor.submit(google_ocr.ocr, img, return_extra=True)
+                future_azure = executor.submit(azure_ocr.ocr, img, return_extra=True)
+                if self.add_checkboxes:
+                    future_checkbox = executor.submit(checkbox_ocr.detect_checkboxes, img)
+                if self.add_qr_barcodes:
+                    future_qr_barcodes = executor.submit(detect_qr_barcodes, img)
 
-            google_bboxes, google_extra = future_google.result()
-            azure_bboxes, _ = future_azure.result()
-            if self.add_checkboxes:
-                checkbox_bboxes, _ = future_checkbox.result()
-            if self.add_qr_barcodes:
-                qr_bboxes = future_qr_barcodes.result()
+                google_bboxes, google_extra = future_google.result()
+                span.set_attribute("nb_google_bboxes", len(google_bboxes))
+                azure_bboxes, _ = future_azure.result()
+                span.set_attribute("nb_azure_bboxes", len(azure_bboxes))
+                if self.add_checkboxes:
+                    checkbox_bboxes, _ = future_checkbox.result()
+                    span.set_attribute("nb_checkbox_bboxes", len(checkbox_bboxes))
+                if self.add_qr_barcodes:
+                    qr_bboxes = future_qr_barcodes.result()
+                    span.set_attribute("nb_qr_bboxes", len(qr_bboxes))
 
         # Use the rotation information from google to correctly rotate the image and the bboxes
         google_rotation_angle = google_extra["document_rotation"]
-        # google_bboxes = [bbox.rotate(google_rotation_angle) for bbox in google_bboxes]
+        span.set_attribute("google_rotation_angle", google_rotation_angle)
+
         azure_bboxes = [bbox.rotate(google_rotation_angle) for bbox in azure_bboxes]
         if self.add_checkboxes:
             checkbox_bboxes = [bbox.rotate(google_rotation_angle) for bbox in checkbox_bboxes]
@@ -136,6 +152,7 @@ class GoogleAzureOCR:
 
         # Remove unwanted bboxes from Google OCR result
         google_bboxes = _filter_unwanted_google_bboxes(google_bboxes, width_height_ratio=img.width / img.height)
+        span.set_attribute("nb_filtered_google_bboxes", len(google_bboxes))
 
         # Combine the bboxes from Google and Azure
         bbox_overlap_checker = BBoxOverlapChecker(google_bboxes)
@@ -152,6 +169,7 @@ class GoogleAzureOCR:
             document_width=document_width,
             document_height=document_height,
         )
+        span.set_attribute("nb_combined_bboxes", len(combined_bboxes))
 
         if self.add_checkboxes:
             # Remove bboxes that have a high overlap with detected checkboxes since sometimes
@@ -170,6 +188,7 @@ class GoogleAzureOCR:
                 document_width=document_width,
                 document_height=document_height,
             )
+            span.set_attribute("nb_combined_bboxes_after_checkboxes", len(combined_bboxes))
 
         if self.add_qr_barcodes:
             combined_bboxes = merge_bbox_lists(
@@ -178,6 +197,7 @@ class GoogleAzureOCR:
                 document_width=document_width,
                 document_height=document_height,
             )
+            span.set_attribute("nb_combined_bboxes_after_qr_barcodes", len(combined_bboxes))
 
         # Build extra information dict
         extra = {
@@ -208,6 +228,7 @@ class GoogleAzureOCR:
     def multi_img_ocr(
         self, imgs: list[Image.Image], return_extra: bool, max_workers: int = ...
     ) -> Union[list[list[BBox]], tuple[list[list[BBox]], list[dict]]]: ...
+    @tracer.start_as_current_span(name="GoogleAzureOCR.multi_img_ocr")
     def multi_img_ocr(self, imgs: list[Image.Image], return_extra: bool = False, max_workers: int = 32):
         """Runs OCR in parallel on multiple images using both Google and Azure OCR, and combines the results.
 
@@ -216,6 +237,9 @@ class GoogleAzureOCR:
             return_extra (bool, optional): Whether to return extra information. Defaults to False.
             max_workers (int, optional): The maximum number of threads to use. Defaults to 32.
         """
+        span = trace.get_current_span()
+        span.set_attribute("nb_images", len(imgs))
+        span.set_attribute("max_workers", max_workers)
         # Execute self.ocr in parallel on all images
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = [executor.submit(self.ocr, img, return_extra) for img in imgs]
@@ -231,6 +255,7 @@ class GoogleAzureOCR:
             results = cast(list[list[BBox]], results)
             return results
 
+    @tracer.start_as_current_span(name="GoogleAzureOCR._get_from_shelf")
     def _get_from_shelf(self, img_hash: str, return_extra: bool):
         """Get a OCR response from the cache, if it exists."""
         if self.cache_file is not None:
@@ -245,6 +270,7 @@ class GoogleAzureOCR:
                 except dbm.error:
                     pass  # db could not be opened
 
+    @tracer.start_as_current_span(name="GoogleAzureOCR._put_on_shelf")
     def _put_on_shelf(self, img_hash: str, return_extra: bool, response):
         if self.cache_file is not None:
             hash_str = repr(("googleazure", img_hash, return_extra))
@@ -269,6 +295,7 @@ class BBoxOverlapChecker:
         for i, bbox in enumerate(bboxes):
             self.rtree.insert(i, bbox.get_shapely_polygon().bounds)
 
+    @tracer.start_as_current_span(name="BBoxOverlapChecker.get_overlapping_bboxes")
     def get_overlapping_bboxes(self, bbox: BBox, threshold: float = 0.01) -> list[BBox]:
         """Returns the bboxes that overlap with the given bbox.
 
@@ -280,6 +307,9 @@ class BBoxOverlapChecker:
         Returns:
             list[BBox]: The bboxes that overlap with the given bbox.
         """
+        span = trace.get_current_span()
+        span.set_attribute("threshold", threshold)
+
         overlapping_bboxes = []
         for i in self.rtree.intersection(bbox.get_shapely_polygon().bounds):
             if (
@@ -287,6 +317,8 @@ class BBoxOverlapChecker:
                 or self.bboxes[i].intersection_area_percent(bbox) > threshold
             ):
                 overlapping_bboxes.append(self.bboxes[i])
+
+        span.set_attribute("nb_overlapping_bboxes", len(overlapping_bboxes))
         return overlapping_bboxes
 
 
@@ -371,6 +403,7 @@ def _filter_date_boxes(bboxes: list[BBox], max_boxes_range: int = 10) -> list[BB
     return bboxes
 
 
+@tracer.start_as_current_span(name="_filter_unwanted_google_bboxes")
 def _filter_unwanted_google_bboxes(bboxes: list[BBox], width_height_ratio: float) -> list[BBox]:
     """Filters out probably incorrect bboxes from the GoogleOCR result.
 
@@ -385,7 +418,11 @@ def _filter_unwanted_google_bboxes(bboxes: list[BBox], width_height_ratio: float
     Returns:
         list[BBox]: The bboxes with the filtered out bboxes removed.
     """
+    span = trace.get_current_span()
+    span.set_attribute("width_height_ratio", width_height_ratio)
+
     median_height = _get_median_box_height(bboxes)
+    span.set_attribute("median_height", median_height)
     filtered_bboxes: list[BBox] = []
     for bbox in bboxes:
         # Don't include bboxes that are higher than the median height (+5%) and are vertically aligned
@@ -399,4 +436,5 @@ def _filter_unwanted_google_bboxes(bboxes: list[BBox], width_height_ratio: float
         filtered_bboxes.append(bbox)
 
     filtered_bboxes = _filter_date_boxes(filtered_bboxes)
+    span.set_attribute("nb_filtered_bboxes", len(filtered_bboxes))
     return filtered_bboxes

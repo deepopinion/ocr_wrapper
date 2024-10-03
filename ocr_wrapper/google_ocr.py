@@ -246,7 +246,7 @@ class GoogleOCR(OcrWrapper):
                             print(f"Google OCR took {end - start} seconds")
                         break
                     except Exception as e:
-                        span.record_exception(e, escaped=True)
+                        span.record_exception(e, escaped=False)
                         if nb_repeats == 0:
                             raise
                         nb_repeats -= 1

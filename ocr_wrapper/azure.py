@@ -144,8 +144,8 @@ class AzureOCR(OcrWrapper):
                     else:
                         break
 
-            while True:
-                with tracer.start_as_current_span(name="AzureOCR._get_ocr_response.get_read_result") as span:
+            with tracer.start_as_current_span(name="AzureOCR._get_ocr_response.get_read_result") as span:
+                while True:
                     read_result = self.client.get_read_result(operation_id)
                     if read_result.status not in ["notStarted", "running"]:
                         break

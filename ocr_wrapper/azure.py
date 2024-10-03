@@ -128,6 +128,7 @@ class AzureOCR(OcrWrapper):
                         ComputerVisionOcrErrorException,
                         ClientRequestError,
                     ) as e:  # Usually raised because of too many requests or timeout
+                        span.record_exception(e, escaped=True)
                         # Retry with jitter and exponential backoff
                         jitter_delay = delay * (1 + 0.1 * (1 - 2 * random.random()))
                         if True:

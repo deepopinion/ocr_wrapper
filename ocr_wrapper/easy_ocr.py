@@ -9,26 +9,8 @@ from PIL import Image
 from .bbox import BBox
 from .ocr_wrapper import OcrWrapper, OcrCacheDisabled
 
-try:
-    import easyocr
-except ImportError:
-    _has_easyocr = False
-else:
-    _has_easyocr = True
-
-
-def requires_easyocr(fn):
-    @functools.wraps(fn)
-    def wrapper_decocator(*args, **kwargs):
-        if not _has_easyocr:
-            raise ImportError('Easy OCR requires missing "easyocr" package.')
-        return fn(*args, **kwargs)
-
-    return wrapper_decocator
-
 
 class EasyOCR(OcrWrapper):
-    @requires_easyocr
     def __init__(
         self,
         *,
@@ -46,6 +28,11 @@ class EasyOCR(OcrWrapper):
             languages: A string or a list of languages to use for OCR from the list here: https://www.jaided.ai/easyocr/
             width_thr: Distance where bounding boxes are still getting merged into one
         """
+        try:
+            import easyocr
+        except ImportError:
+            raise ImportError('EasyOCR requires missing "easyocr" package.')
+
         super().__init__(
             cache_file=cache_file,
             max_size=max_size,
@@ -58,7 +45,6 @@ class EasyOCR(OcrWrapper):
 
         self.client = easyocr.Reader(self.languages, **kwargs)
 
-    @requires_easyocr
     def _get_ocr_response(self, img: Image.Image):
         """Gets the OCR response from EasyOCR. Uses a cached response if a cache file has been specified and the
         document has been OCRed already"""
@@ -69,7 +55,6 @@ class EasyOCR(OcrWrapper):
             self._put_on_shelf(img, response)
         return response
 
-    @requires_easyocr
     def _convert_ocr_response(self, response) -> tuple[List[BBox], dict[str, Any]]:
         """Converts the response given by EasyOCR to a list of BBox"""
         bboxes, confidences = [], []

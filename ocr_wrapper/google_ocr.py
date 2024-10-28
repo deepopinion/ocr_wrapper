@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import functools
 import os
 import time
 from time import sleep
@@ -14,24 +13,6 @@ from .ocr_wrapper import OcrCacheDisabled, OcrWrapper
 from .utils import flip_number_blocks, has_arabic_text, set_image_attributes
 
 tracer = trace.get_tracer(__name__)
-
-try:
-    from google.cloud import vision
-except ImportError:
-    _has_gcloud = False
-else:
-    _has_gcloud = True
-
-
-def requires_gcloud(fn):
-    @functools.wraps(fn)
-    def wrapper_decocator(*args, **kwargs):
-        if not _has_gcloud:
-            raise ImportError('Google OCR requires missing "google-cloud-vision" package.')
-        return fn(*args, **kwargs)
-
-    return wrapper_decocator
-
 
 # Define a list of languages which are written from right to left. This is needed to determine the rotation of the document
 rtl_languages = [
@@ -183,7 +164,6 @@ class GoogleOCR(OcrWrapper):
             Google Cloud Vision API.
     """
 
-    @requires_gcloud
     def __init__(
         self,
         *,
@@ -197,6 +177,11 @@ class GoogleOCR(OcrWrapper):
         add_qr_barcodes: bool = False,
         verbose: bool = False,
     ):
+        try:
+            from google.cloud import vision
+        except ImportError:
+            raise ImportError('GoogleOCR requires missing "google-cloud-vision" package.')
+
         super().__init__(
             cache_file=cache_file,
             max_size=max_size,
@@ -219,11 +204,15 @@ class GoogleOCR(OcrWrapper):
         self.endpoint = endpoint
         self.client = vision.ImageAnnotatorClient(client_options={"api_endpoint": self.endpoint})
 
-    @requires_gcloud
     @tracer.start_as_current_span(name="GoogleOCR._get_ocr")
     def _get_ocr_response(self, img: Image.Image):
         """Gets the OCR response from the Google cloud. Uses cached response if a cache file has been specified and the
         document has been OCRed already"""
+        try:
+            from google.cloud import vision
+        except ImportError:
+            raise ImportError('GoogleOCR requires missing "google-cloud-vision" package.')
+
         span = trace.get_current_span()
         set_image_attributes(span, img)
 
@@ -257,7 +246,6 @@ class GoogleOCR(OcrWrapper):
             self._put_on_shelf(img, response)
         return response
 
-    @requires_gcloud
     @tracer.start_as_current_span(name="GoogleOCR._convert_ocr_response")
     def _convert_ocr_response(self, response) -> tuple[List[BBox], dict[str, Any]]:
         """Converts the response given by Google OCR to a list of BBox"""

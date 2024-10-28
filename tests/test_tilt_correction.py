@@ -1,5 +1,13 @@
+import os
+
+import numpy as np
+import pytest
+from ocr_wrapper.tilt_correction import _closest_90_degree_distance, correct_tilt
+from PIL import Image
 from pytest import mark
-from ocr_wrapper.tilt_correction import _closest_90_degree_distance
+
+filedir = os.path.dirname(__file__)
+DATA_DIR = os.path.join(filedir, "data")
 
 
 @mark.parametrize(
@@ -25,3 +33,12 @@ from ocr_wrapper.tilt_correction import _closest_90_degree_distance
 )
 def test_closest_90_degree_distance(angle, expected):
     assert _closest_90_degree_distance(angle) == expected
+
+
+@pytest.mark.parametrize("angle", np.linspace(0, 9, 15))
+def test_correct_tilt(angle):
+    file = os.path.join(DATA_DIR, "mixed_arabic.jpg")
+    img = Image.open(file)
+    rotated_img = img.rotate(angle)
+    _, detected_angle = correct_tilt(rotated_img)
+    assert pytest.approx(abs(detected_angle), abs=0.1) == angle

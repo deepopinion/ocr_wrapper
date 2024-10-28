@@ -74,7 +74,6 @@ class DetectTilt:
         self.loop = range(nb_fine_scan)
         pre_scan_unit = pi / nb_pre_scan
         # The pre-scan grid covers angles in the interval [-90°, 90°[.
-        # self.pre_scan_angles = torch.arange(nb_pre_scan) * pre_scan_unit - ANGLE90
         self.pre_scan_angles = np.arange(nb_pre_scan) * pre_scan_unit - ANGLE90
         # We define our fine-scan grids. We start with an auxiliary int_grid, which has the right amount of values
         # left and right from the zero value. However, the step-size is one. The latter will changed for the grids we'll

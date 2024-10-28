@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import Optional, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 from PIL import Image
 
@@ -9,7 +9,6 @@ import ocr_wrapper
 from ocr_wrapper import BBox
 
 from .utils import resize_image
-from typing import TYPE_CHECKING
 
 # Load the Google Cloud Document AI client library globally only for type checking (needed for argument types)
 if TYPE_CHECKING:

@@ -213,7 +213,6 @@ class DetectTilt:
             small_image_tensor.squeeze(0), self.contrast_kernel, mode="valid"
         )
 
-        # small_image_tensor = torch.maximum(torch.tensor(0, device=self.device), small_image_tensor).square()
         # The contrast filter might have created negative values, which we remove now.
         # After that, we square the results. The reason is that the contrast filter only removes perfectly homogenous areas
         # of the some color - for all other pixel-areas we just reduce the pixel values. Squaring suppresses these small
@@ -260,7 +259,6 @@ class DetectTilt:
         dark_threshold = np.maximum(MINIMAL_DARK_VALUE, np.mean(small_image_tensor))
 
         # Determine all pixel-indices of pixels above the dark_threshold (i.e. the ones which survive the filtering)
-        # indices = torch.where(work_tensor > dark_threshold)
         indices = np.where(work_tensor > dark_threshold)
 
         # We emulate rotating the image for various test_angles. For the rotation, we need the (x,y) positions of the pixels

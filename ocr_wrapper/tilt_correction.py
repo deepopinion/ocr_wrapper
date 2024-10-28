@@ -6,7 +6,6 @@ from math import pi
 import numpy as np
 import scipy.signal
 
-# import torch
 from opentelemetry import trace
 from PIL import Image
 

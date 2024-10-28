@@ -357,6 +357,7 @@ def correct_tilt(image: Image.Image, tilt_threshold: float = 10) -> tuple[Image.
     try:
         angle = detect_tilt.find_angle(image)
     except Exception as e:
+        raise
         warnings.warn(f"Error while detecting tilt: {e}")
         angle = 0.0
     angle = _closest_90_degree_distance(angle)  # We round to the nearest multiple of 90 degrees

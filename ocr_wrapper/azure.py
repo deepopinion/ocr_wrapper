@@ -85,7 +85,6 @@ class AzureOCR(OcrWrapper):
         document has been OCRed already"""
         try:
             from msrest.exceptions import ClientRequestError
-
             from azure.cognitiveservices.vision.computervision.models import (
                 ComputerVisionOcrErrorException,
                 OperationStatusCodes,

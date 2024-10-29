@@ -8,7 +8,7 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 ### Fixed
 
 ### Changed
-- OCR provider specific dependencies are now being loaded lazily to reduce the import time
+
 ### Removed
 
 

@@ -67,9 +67,7 @@ def detect_qr_barcodes(image: Image.Image) -> list[BBox]:
     try:
         from pyzbar import pyzbar
     except ImportError:
-        raise ImportError(
-            'QR and barcode detection and decoding requires missing "pyzbar" package.'
-        )
+        raise ImportError('QR and barcode detection and decoding requires missing "pyzbar" package.')
     decoded_objects = _detect_raw_qr_barcodes(image)
     bboxes = [_decoded_to_bbox(decoded) for decoded in decoded_objects]
     # Normalize the BBoxes so they are not in pixel coordinates anymore

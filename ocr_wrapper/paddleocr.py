@@ -7,26 +7,8 @@ from PIL import Image
 from .bbox import BBox
 from .ocr_wrapper import OcrCacheDisabled, OcrWrapper
 
-try:
-    import paddleocr
-except ImportError:
-    _has_paddle = False
-else:
-    _has_paddle = True
-
-
-def requires_paddle(fn):
-    @functools.wraps(fn)
-    def wrapper_decocator(*args, **kwargs):
-        if not _has_paddle:
-            raise ImportError('PaddleOCR requires missing "paddleocr" package.')
-        return fn(*args, **kwargs)
-
-    return wrapper_decocator
-
 
 class PaddleOCR(OcrWrapper):
-    @requires_paddle
     def __init__(
         self,
         *,
@@ -36,6 +18,11 @@ class PaddleOCR(OcrWrapper):
         add_qr_barcodes: bool = False,
         verbose: bool = False
     ):
+        try:
+            import paddleocr
+        except ImportError:
+            raise ImportError('PaddleOCR requires missing "paddleocr" package.')
+
         super().__init__(
             cache_file=cache_file,
             max_size=max_size,
@@ -64,7 +51,6 @@ class PaddleOCR(OcrWrapper):
         else:
             return img, 1.0
 
-    @requires_paddle
     def _get_ocr_response(self, img: Image.Image):
         # Try to get cached response
         response = self._get_from_shelf(img)
@@ -76,7 +62,6 @@ class PaddleOCR(OcrWrapper):
             self._put_on_shelf(img, response)
         return response
 
-    @requires_paddle
     def _convert_ocr_response(self, response) -> tuple[List[BBox], dict[str, Any]]:
         """Converts the response given by Google OCR to a list of BBox"""
         paddle_resp, resize_ratio = response

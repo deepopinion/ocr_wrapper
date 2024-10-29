@@ -295,7 +295,6 @@ class BBoxOverlapChecker:
         for i, bbox in enumerate(bboxes):
             self.rtree.insert(i, bbox.get_shapely_polygon().bounds)
 
-    @tracer.start_as_current_span(name="BBoxOverlapChecker.get_overlapping_bboxes")
     def get_overlapping_bboxes(self, bbox: BBox, threshold: float = 0.01) -> list[BBox]:
         """Returns the bboxes that overlap with the given bbox.
 
@@ -318,7 +317,6 @@ class BBoxOverlapChecker:
             ):
                 overlapping_bboxes.append(self.bboxes[i])
 
-        span.set_attribute("nb_overlapping_bboxes", len(overlapping_bboxes))
         return overlapping_bboxes
 
 

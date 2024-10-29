@@ -11,6 +11,11 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 
 ### Removed
 
+
+## Release v0.2.3 (2024-10-29)
+### Changed
+- OCR provider specific dependencies are now being loaded lazily to reduce the import time
+
 ## Release v0.2.2 (2024-10-03)
 ### Added
 - Added OpenTelemetry to `GoogleAzureOCR`, `GoogleOCR`, `AzureOCR`, and `OcrWrapper` to enable tracing of the OCR process

@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import functools
 import os
-from typing import Optional, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 from PIL import Image
 
@@ -11,25 +10,9 @@ from ocr_wrapper import BBox
 
 from .utils import resize_image
 
-try:
-    from google.api_core.client_options import ClientOptions
+# Load the Google Cloud Document AI client library globally only for type checking (needed for argument types)
+if TYPE_CHECKING:
     from google.cloud import documentai
-except ImportError:
-    _has_gcloud = False
-else:
-    _has_gcloud = True
-
-
-def requires_gcloud(fn):
-    @functools.wraps(fn)
-    def wrapper_decocator(*args, **kwargs):
-        if not _has_gcloud:
-            raise ImportError(
-                "GoogleDocumentOcrCheckboxDetector OCR requires missing 'google-cloud-documentai' package."
-            )
-        return fn(*args, **kwargs)
-
-    return wrapper_decocator
 
 
 def _val_or_env(val: Optional[str], env: str, default: Optional[str] = None) -> Optional[str]:
@@ -62,7 +45,6 @@ def _visual_element_to_bbox(visual_element) -> tuple[BBox, float]:
 
 
 class GoogleDocumentOcrCheckboxDetector:
-    @requires_gcloud
     def __init__(
         self,
         project_id: Optional[str] = None,
@@ -71,6 +53,12 @@ class GoogleDocumentOcrCheckboxDetector:
         processor_version: Optional[str] = None,
         max_size: Optional[int] = 4096,
     ):
+        try:
+            from google.api_core.client_options import ClientOptions
+            from google.cloud import documentai
+        except ImportError:
+            raise ImportError("GoogleDocumentOcrCheckboxDetector requires missing 'google-cloud-documentai' package.")
+
         self.project_id = _val_or_env(project_id, "GOOGLE_DOC_OCR_PROJECT_ID")
         self.location = _val_or_env(location, "GOOGLE_DOC_OCR_LOCATION", default="eu")
         self.processor_id = _val_or_env(processor_id, "GOOGLE_DOC_OCR_PROCESSOR_ID")
@@ -105,8 +93,12 @@ class GoogleDocumentOcrCheckboxDetector:
             self.project_id, self.location, self.processor_id, self.processor_version
         )
 
-    @requires_gcloud
     def detect_checkboxes(self, page: Union[Image.Image, documentai.RawDocument]) -> tuple[list[BBox], list[float]]:
+        try:
+            from google.cloud import documentai
+        except ImportError:
+            raise ImportError("GoogleDocumentOcrCheckboxDetector requires missing 'google-cloud-documentai' package.")
+
         if isinstance(page, Image.Image):
             if self.max_size is not None:
                 page = resize_image(img=page, max_size=self.max_size)

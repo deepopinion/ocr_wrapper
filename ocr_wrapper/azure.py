@@ -13,31 +13,7 @@ from .bbox import BBox
 from .ocr_wrapper import OcrCacheDisabled, OcrWrapper, Union
 from .utils import set_image_attributes
 
-try:
-    from msrest.authentication import CognitiveServicesCredentials
-    from msrest.exceptions import ClientRequestError
-
-    from azure.cognitiveservices.vision.computervision import ComputerVisionClient
-    from azure.cognitiveservices.vision.computervision.models import (
-        ComputerVisionOcrErrorException,
-        OperationStatusCodes,
-    )
-except ImportError:
-    _has_azure = False
-else:
-    _has_azure = True
-
 tracer = trace.get_tracer(__name__)
-
-
-def requires_azure(fn):
-    @functools.wraps(fn)
-    def wrapper_decocator(*args, **kwargs):
-        if not _has_azure:
-            raise ImportError('Azure Read requires missing "azure-cognitiveservices-vision-computervision" package.')
-        return fn(*args, **kwargs)
-
-    return wrapper_decocator
 
 
 def _discretize_angle_to_90_deg(rotation: float) -> int:
@@ -70,7 +46,6 @@ def _determine_endpoint_and_key(endpoint: Optional[str], key: Optional[str]) -> 
 
 
 class AzureOCR(OcrWrapper):
-    @requires_azure
     def __init__(
         self,
         *,
@@ -85,6 +60,11 @@ class AzureOCR(OcrWrapper):
         add_qr_barcodes: bool = False,
         verbose: bool = False,
     ):
+        try:
+            from msrest.authentication import CognitiveServicesCredentials
+            from azure.cognitiveservices.vision.computervision import ComputerVisionClient
+        except ImportError:
+            raise ImportError('AzureOCR requires missing "azure-cognitiveservices-vision-computervision" package.')
         super().__init__(
             cache_file=cache_file,
             max_size=max_size,
@@ -99,11 +79,19 @@ class AzureOCR(OcrWrapper):
         endpoint, key = _determine_endpoint_and_key(endpoint, key)
         self.client = ComputerVisionClient(endpoint, CognitiveServicesCredentials(key))
 
-    @requires_azure
     @tracer.start_as_current_span(name="AzureOCR.get_ocr_response")
     def _get_ocr_response(self, img: Image.Image):
         """Gets the OCR response from the Azure. Uses cached response if a cache file has been specified and the
         document has been OCRed already"""
+        try:
+            from msrest.exceptions import ClientRequestError
+            from azure.cognitiveservices.vision.computervision.models import (
+                ComputerVisionOcrErrorException,
+                OperationStatusCodes,
+            )
+        except ImportError:
+            raise ImportError('AzureOCR requires missing "azure-cognitiveservices-vision-computervision" package.')
+
         span = trace.get_current_span()
         set_image_attributes(span, img)
 
@@ -158,7 +146,6 @@ class AzureOCR(OcrWrapper):
             self._put_on_shelf(img, read_result)
         return read_result
 
-    @requires_azure
     @tracer.start_as_current_span(name="AzureOCR._convert_ocr_response")
     def _convert_ocr_response(self, response) -> tuple[List[BBox], dict[str, Any]]:
         """Converts the response given by Azure Read to a list of BBox"""

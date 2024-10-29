@@ -6,26 +6,8 @@ from PIL import Image
 from .bbox import BBox
 from .ocr_wrapper import OcrCacheDisabled, OcrWrapper
 
-try:
-    import boto3
-except ImportError:
-    _has_boto3 = False
-else:
-    _has_boto3 = True
-
-
-def requires_boto(fn):
-    @functools.wraps(fn)
-    def wrapper_decocator(*args, **kwargs):
-        if not _has_boto3:
-            raise ImportError('AWS Textract requires missing "boto3" package.')
-        return fn(*args, **kwargs)
-
-    return wrapper_decocator
-
 
 class AwsOCR(OcrWrapper):
-    @requires_boto
     def __init__(
         self,
         *,
@@ -34,10 +16,19 @@ class AwsOCR(OcrWrapper):
         add_checkboxes: bool = False,
         verbose: bool = False
     ):
-        super().__init__(cache_file=cache_file, max_size=max_size, add_checkboxes=add_checkboxes, verbose=verbose)
+        try:
+            import boto3
+        except ImportError:
+            raise ImportError('AwsOCR requires missing "boto3" package.')
+
+        super().__init__(
+            cache_file=cache_file,
+            max_size=max_size,
+            add_checkboxes=add_checkboxes,
+            verbose=verbose,
+        )
         self.client = boto3.client("textract", region_name="eu-central-1")
 
-    @requires_boto
     def _get_ocr_response(self, img: Image.Image):
         """Gets the OCR response from AWS. Uses cached response if a cache file has been specified and the
         document has been OCRed already"""
@@ -52,7 +43,6 @@ class AwsOCR(OcrWrapper):
             self._put_on_shelf(img, response)
         return response
 
-    @requires_boto
     def _convert_ocr_response(self, response) -> tuple[List[BBox], dict[str, Any]]:
         """Converts the response given by Google OCR to a list of BBox"""
         bboxes = []

@@ -178,9 +178,6 @@ class DetectTilt:
 
             return square_sum
 
-        # Convert image to grayscale numpy array and invert value. After that, black is 1 and white is 0
-        image_tensor = 1.0 - np.asarray(image.convert("L"), dtype=np.float32) / 255.0
-
         # As approximation, we reduce all images to roughly the same number of pixels given by self.nb_pixel.
         # We calculate a reduction_factor. Using the square root of the fraction of the new number of pixels divided by
         # original number of pixels (width * heigt), we can use the reduction_factor on the height and width, later on.
@@ -189,15 +186,13 @@ class DetectTilt:
         if reduce_factor >= 1:
             # small image - stays unchanged
             reduce_factor = 1
-            small_image_tensor = np.expand_dims(image_tensor, axis=0)
+            small_image = image
         else:
-            height, width = image_tensor.shape[-2:]
             new_height = int(height * reduce_factor)
             new_width = int(width * reduce_factor)
-            small_image_tensor = np.expand_dims(
-                np.array(Image.fromarray(image_tensor).resize((new_width, new_height), Image.Resampling.BILINEAR)),
-                axis=0,
-            )
+            small_image = image.resize((new_width, new_height), Image.Resampling.NEAREST)
+        # Convert image to grayscale numpy array and invert value. After that, black is 1 and white is 0
+        small_image_tensor = 1.0 - np.asarray(small_image.convert("L"), dtype=np.float32) / 255.0
 
         # Originally, the algorithm was designed for images of white paper with black ink. To extend the algorithm beyond
         # these limitations, we use a "contrast_kernel" to transform colorful pictures with text into mostly black and white
@@ -205,7 +200,7 @@ class DetectTilt:
         # (i.e. turns them into 0, which corresponds to white, after the inversion we made at the beginning).
         # Only contrast survives (as letters).
         small_image_tensor: np.ndarray = scipy.signal.convolve2d(
-            small_image_tensor.squeeze(0), self.contrast_kernel, mode="valid"
+            small_image_tensor, self.contrast_kernel, mode="valid"
         )
 
         # The contrast filter might have created negative values, which we remove now.

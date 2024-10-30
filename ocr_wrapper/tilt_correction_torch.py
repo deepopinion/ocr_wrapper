@@ -1,6 +1,12 @@
 from __future__ import annotations
 
-import torch
+try:
+    import torch
+except ImportError:
+    raise ImportError(
+        "PyTorch is not installed, but is required for tilt-correction. Either install the 'torch' package or set the environment variable OCR_WRAPPER_NO_TORCH to use numpy and scipy instead."
+    )
+
 from PIL import Image
 from torchvision.transforms import ToTensor
 from torchvision.transforms.functional import InterpolationMode, rotate

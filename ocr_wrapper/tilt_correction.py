@@ -1,7 +1,7 @@
 """
 This module provides functionality to correct the tilt of an image of a document page.
 
-Which implementation of the tilt correction algorithm is used can be controlled by the environment variable `OCR_WRAPPER_USE_TORCH`.
+Which implementation of the tilt correction algorithm is used can be controlled by the environment variable `OCR_WRAPPER_NO_TORCH`.
 """
 
 import os
@@ -12,8 +12,7 @@ from PIL import Image
 
 tracer = trace.get_tracer(__name__)
 
-# Depending on OCR_WRAPPER_USE_TORCH we import the correct DetectTilt class
-if os.environ.get("OCR_WRAPPER_USE_TORCH", "True") == "False":
+if os.getenv("OCR_WRAPPER_NO_TORCH"):
     USE_TORCH = False
     from .tilt_correction_numpy import DetectTilt
 else:

@@ -4,7 +4,7 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 
 ## Release v0.0.x ()
 ### Added
-
+- Added possibility to deactivate using torch by setting the environment variable `OCR_WRAPPER_NO_TORCH`. By default, torch is used. The main use case for this to decreate import times of the library. If torch is not used, numpy and SciPy are used instead. Be aware that tilt correction is around 5x slower without torch.
 ### Fixed
 
 ### Changed

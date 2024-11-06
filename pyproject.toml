@@ -1,6 +1,6 @@
 [project]
 name = "ocr_wrapper"
-version = "0.2.4"
+version = "0.2.5"
 license.file = "LICENSE.md"
 authors = [{ name = "DeepOpinion", email = "hello@deepopinion.ai" }]
 urls.repository = "https://github.com/deepopinion/ocr_wrapper"

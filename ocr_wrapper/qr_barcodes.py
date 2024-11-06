@@ -55,6 +55,10 @@ def _decoded_to_bbox(decoded) -> BBox:
 def _detect_raw_qr_barcodes(image: Image.Image) -> list:
     """Detects barcodes in an image and returns a list of Decoded objects"""
     # Make the image binary black and white to improve detection
+    try:
+        from pyzbar import pyzbar
+    except ImportError:
+        raise ImportError('QR and barcode detection and decoding requires missing "pyzbar" package.')
     image = image.convert("L")
     image = image.point(lambda x: 0 if x < 128 else 255, "1")
 
@@ -64,10 +68,6 @@ def _detect_raw_qr_barcodes(image: Image.Image) -> list:
 
 def detect_qr_barcodes(image: Image.Image) -> list[BBox]:
     """Detects barcodes in an image and returns a list of BBox objects"""
-    try:
-        from pyzbar import pyzbar
-    except ImportError:
-        raise ImportError('QR and barcode detection and decoding requires missing "pyzbar" package.')
     decoded_objects = _detect_raw_qr_barcodes(image)
     bboxes = [_decoded_to_bbox(decoded) for decoded in decoded_objects]
     # Normalize the BBoxes so they are not in pixel coordinates anymore

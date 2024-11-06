@@ -11,6 +11,11 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 
 ### Removed
 
+## Release v0.2.5 (2024-11-06)
+### Added
+- Added tracing to `draw_bboxes`
+### Fixed
+- Fixed an import bug in QR/barcode detection and decoding
 
 ## Release v0.2.4 (2024-10-30)
 ### Added

@@ -9,10 +9,13 @@ from random import random
 from typing import Optional, TypeVar, Union
 from uuid import uuid4
 
+from opentelemetry import trace
 from PIL import Image, ImageColor, ImageDraw, ImageFont
 from shapely import affinity
 from shapely.errors import GEOSException
 from shapely.geometry import Polygon
+
+tracer = trace.get_tracer(__name__)
 
 T = TypeVar("T")
 
@@ -640,6 +643,7 @@ class BBox:
             raise Exception(f"Only 90, 180, and 270 are valid angles, but {angle} was given")
 
 
+@tracer.start_as_current_span("draw_bboxes")
 def draw_bboxes(
     img: Image.Image,
     bboxes: list[BBox],

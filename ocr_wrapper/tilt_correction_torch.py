@@ -7,9 +7,15 @@ except ImportError:
         "PyTorch is not installed, but is required for tilt-correction. Either install the 'torch' package or set the environment variable OCR_WRAPPER_NO_TORCH to use numpy and scipy instead."
     )
 
+try:
+    from torchvision.transforms import ToTensor
+    from torchvision.transforms.functional import InterpolationMode, rotate
+except ImportError:
+    raise ImportError(
+        "The 'torchvision' package is not installed, but is required for tilt-correction. Please install the 'torchvision' package."
+    )
+
 from PIL import Image
-from torchvision.transforms import ToTensor
-from torchvision.transforms.functional import InterpolationMode, rotate
 
 # ---------------- GENERAL IDEA ----------------------------------------------------------------------------------------------
 # We like to find a potential tilt angle a document scan might have picked up.

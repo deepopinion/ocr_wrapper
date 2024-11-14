@@ -22,6 +22,9 @@ Use the following dependency groups to install the required packages for the OCR
 - EasyOCR: `ocr_wrapper[easy]`
 - PaddleOCR: `ocr_wrapper[paddle]`
 
+Additionally, you can decide whether to use torch or not (faster for large files). As a fallback, numpy is used. If you wanna disable torch 
+install it via `ocr_wrapper[torch]`. Otherwise, ensure that you set the env variable `OCR_WRAPPER_NO_TORCH`.
+
 Depending on your operating system you might also have to install the Noto Sans font package (e.g. `noto-sans` in Ubuntu)
 
 ## Usage

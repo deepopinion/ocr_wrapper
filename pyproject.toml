@@ -11,8 +11,6 @@ dependencies = [
     "pdf2image",
     "rtree",
     "opencv-python-headless",
-    "torch",
-    "torchvision",
     "numpy",
     "scipy",
     "opentelemetry-api",
@@ -35,6 +33,7 @@ aws = ["boto3"]
 easy = ["easyocr"]
 paddle = ["paddleocr>=2.0.1"]
 qr_barcodes = ["pyzbar"]
+torch = ["torch", "torchvision"]
 
 dev = ["black~=24.4", "hypothesis", "pytest", "pytest-mock"]
 all = ["ocr_wrapper[azure,google,googleazure,aws,easy,paddle,qr_barcodes]"]

@@ -67,8 +67,8 @@ def correct_tilt(
 
     # We only rotate if the angle is small enough to prevent bugs introduced by the algorithm
     angle = angle if abs(angle) < tilt_threshold else 0.0
-    with tracer.start_as_current_span("correct_tilt: rotate_image"):
-        if abs(angle) < min_rotation_threshold:
+    with tracer.start_as_current_span("correct_tilt: rotate_image", attributes={"angle": angle}):
+        if abs(angle) > min_rotation_threshold:
             rotated_image = image.rotate(-angle, expand=True, fillcolor="white")
         else:
             rotated_image = image

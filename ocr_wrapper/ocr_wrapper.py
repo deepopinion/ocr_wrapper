@@ -33,6 +33,7 @@ class OcrCacheDisabled:
 OCR_CACHE_DISABLED = OcrCacheDisabled()
 
 
+@tracer.start_as_current_span(name="ocr_wrapper.rotate_image")
 def rotate_image(image: Image.Image, angle: int) -> Image.Image:
     """
     Rotate an image by a given angle.
@@ -119,7 +120,8 @@ class OcrWrapper(ABC):
         full_size_img = img.copy()
         # Resize image if needed. If the image is smaller than max_size, it will be returned as is
         if self.max_size is not None:
-            img = resize_image(img, self.max_size)
+            with tracer.start_as_current_span("OcrWrapper.ocr.resize_image"):
+                img = resize_image(img, self.max_size)
             span.set_attribute("resized_image_size", img.size)
 
         # Get response from an OCR engine
@@ -288,6 +290,10 @@ class OcrWrapper(ABC):
     @tracer.start_as_current_span(name="OcrWrapper._pil_img_to_compressed")
     def _pil_img_to_compressed(image: Image.Image, compression: str = "png") -> bytes:
         """Converts a pil image to "compressed" image (e.g. png, webp) in memory"""
+        span = trace.get_current_span()
+        set_image_attributes(span, image)
+        span.set_attribute("compression", compression)
+
         with BytesIO() as output:
             if compression.lower() == "png":
                 image.save(output, "PNG", compress_level=5)

@@ -15,7 +15,11 @@ except ImportError:
         "The 'torchvision' package is not installed, but is required for tilt-correction. Please install the 'torchvision' package."
     )
 
+from opentelemetry import trace
 from PIL import Image
+
+tracer = trace.get_tracer(__name__)
+
 
 # ---------------- GENERAL IDEA ----------------------------------------------------------------------------------------------
 # We like to find a potential tilt angle a document scan might have picked up.
@@ -120,6 +124,7 @@ class DetectTilt:
         # Torch's conv2d function expects a batch- and a color-dimension at the beginning of the kernel.
         self.contrast_kernel = self.contrast_kernel.unsqueeze(0).unsqueeze(0)
 
+    @tracer.start_as_current_span(name="DetectTilt.find_angle-torch")
     def find_angle(self, image: Image.Image) -> float:
         """
         Args:

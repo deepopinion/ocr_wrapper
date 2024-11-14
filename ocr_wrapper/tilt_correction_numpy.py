@@ -4,7 +4,10 @@ from math import pi
 
 import numpy as np
 import scipy.signal
+from opentelemetry import trace
 from PIL import Image
+
+tracer = trace.get_tracer(__name__)
 
 # ---------------- GENERAL IDEA ----------------------------------------------------------------------------------------------
 # We like to find a potential tilt angle a document scan might have picked up.
@@ -102,6 +105,7 @@ class DetectTilt:
             ]
         ).astype(np.float32)
 
+    @tracer.start_as_current_span(name="DetectTilt.find_angle-numpy")
     def find_angle(self, image: Image.Image) -> float:
         """
         Args:

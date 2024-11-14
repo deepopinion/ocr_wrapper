@@ -58,6 +58,7 @@ class AzureOCR(OcrWrapper):
         key: Optional[str] = None,
         add_checkboxes: bool = False,
         add_qr_barcodes: bool = False,
+        min_rotation_threshold: float = 0.0,
         verbose: bool = False,
     ):
         try:
@@ -74,6 +75,7 @@ class AzureOCR(OcrWrapper):
             supports_multi_samples=False,
             add_checkboxes=add_checkboxes,
             add_qr_barcodes=add_qr_barcodes,
+            min_rotation_threshold=min_rotation_threshold,
             verbose=verbose,
         )
         endpoint, key = _determine_endpoint_and_key(endpoint, key)
@@ -119,7 +121,7 @@ class AzureOCR(OcrWrapper):
                         span.record_exception(e, escaped=False)
                         # Retry with jitter and exponential backoff
                         jitter_delay = delay * (1 + 0.1 * (1 - 2 * random.random()))
-                        if True:
+                        if self.verbose:
                             print("Azure OCR failed with error", e)
                             print(f"Retrying... {retries} retries left.")
                             print(f"Jitter delay: {jitter_delay}")

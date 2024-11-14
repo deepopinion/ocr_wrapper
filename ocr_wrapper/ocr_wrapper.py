@@ -33,6 +33,7 @@ class OcrCacheDisabled:
 OCR_CACHE_DISABLED = OcrCacheDisabled()
 
 
+@tracer.start_as_current_span(name="ocr_wrapper.rotate_image")
 def rotate_image(image: Image.Image, angle: int) -> Image.Image:
     """
     Rotate an image by a given angle.
@@ -69,6 +70,7 @@ class OcrWrapper(ABC):
         supports_multi_samples: bool = False,
         add_checkboxes: bool = False,
         add_qr_barcodes: bool = False,
+        min_rotation_threshold: float = 0.0,
         verbose: bool = False,
     ):
         if cache_file == OCR_CACHE_DISABLED:
@@ -88,6 +90,7 @@ class OcrWrapper(ABC):
         if self.add_checkboxes:
             warnings.warn("Checkbox detection is only supported by GoogleAzureOCR")
         self.add_qr_barcodes = add_qr_barcodes
+        self.min_rotation_threshold = min_rotation_threshold
         self.shelve_mutex = Lock()  # Mutex to ensure that only one thread is writing to the cache file at a time
 
     @overload
@@ -110,7 +113,7 @@ class OcrWrapper(ABC):
 
         # Correct tilt (i.e. small rotation)
         if self.correct_tilt:
-            img, tilt_angle = correct_tilt(img)
+            img, tilt_angle = correct_tilt(img, min_rotation_threshold=self.min_rotation_threshold)
             extra["rotated_image"] = img
             extra["tilt_angle"] = tilt_angle
             span.set_attribute("tilt_angle", tilt_angle)
@@ -119,7 +122,8 @@ class OcrWrapper(ABC):
         full_size_img = img.copy()
         # Resize image if needed. If the image is smaller than max_size, it will be returned as is
         if self.max_size is not None:
-            img = resize_image(img, self.max_size)
+            with tracer.start_as_current_span("OcrWrapper.ocr.resize_image"):
+                img = resize_image(img, self.max_size)
             span.set_attribute("resized_image_size", img.size)
 
         # Get response from an OCR engine
@@ -288,6 +292,10 @@ class OcrWrapper(ABC):
     @tracer.start_as_current_span(name="OcrWrapper._pil_img_to_compressed")
     def _pil_img_to_compressed(image: Image.Image, compression: str = "png") -> bytes:
         """Converts a pil image to "compressed" image (e.g. png, webp) in memory"""
+        span = trace.get_current_span()
+        set_image_attributes(span, image)
+        span.set_attribute("compression", compression)
+
         with BytesIO() as output:
             if compression.lower() == "png":
                 image.save(output, "PNG", compress_level=5)

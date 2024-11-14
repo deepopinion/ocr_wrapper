@@ -7,9 +7,19 @@ except ImportError:
         "PyTorch is not installed, but is required for tilt-correction. Either install the 'torch' package or set the environment variable OCR_WRAPPER_NO_TORCH to use numpy and scipy instead."
     )
 
+try:
+    from torchvision.transforms import ToTensor
+    from torchvision.transforms.functional import InterpolationMode, rotate
+except ImportError:
+    raise ImportError(
+        "The 'torchvision' package is not installed, but is required for tilt-correction. Please install the 'torchvision' package."
+    )
+
+from opentelemetry import trace
 from PIL import Image
-from torchvision.transforms import ToTensor
-from torchvision.transforms.functional import InterpolationMode, rotate
+
+tracer = trace.get_tracer(__name__)
+
 
 # ---------------- GENERAL IDEA ----------------------------------------------------------------------------------------------
 # We like to find a potential tilt angle a document scan might have picked up.
@@ -114,6 +124,7 @@ class DetectTilt:
         # Torch's conv2d function expects a batch- and a color-dimension at the beginning of the kernel.
         self.contrast_kernel = self.contrast_kernel.unsqueeze(0).unsqueeze(0)
 
+    @tracer.start_as_current_span(name="DetectTilt.find_angle-torch")
     def find_angle(self, image: Image.Image) -> float:
         """
         Args:

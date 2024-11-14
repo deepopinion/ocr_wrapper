@@ -8,9 +8,14 @@ import os
 import warnings
 
 from opentelemetry import trace
+from opentelemetry.metrics import get_meter
 from PIL import Image
 
 tracer = trace.get_tracer(__name__)
+meter = get_meter(__name__)
+tilt_histogram = meter.create_histogram(
+    name="tilt_histogram", unit="degrees", description="Tilt angle of document images"
+)
 
 if os.getenv("OCR_WRAPPER_NO_TORCH"):
     USE_TORCH = False
@@ -32,13 +37,16 @@ def _closest_90_degree_distance(angle: float) -> float:
 
 
 @tracer.start_as_current_span("correct_tilt")
-def correct_tilt(image: Image.Image, tilt_threshold: float = 10) -> tuple[Image.Image, float]:
+def correct_tilt(
+    image: Image.Image, tilt_threshold: float = 10, min_rotation_threshold: float = 0.0
+) -> tuple[Image.Image, float]:
     """
     Corrects the tilt (small rotations) of an image of a document page
 
     Args:
         image: Image to correct the tilt of
         tilt_threshold: The maximum tilt angle to correct. If the angle is larger than this, the image is not rotated at all.
+        min_rotation_threshold: The minimum rotation angle to correct. If abs(angle) is smaller than this, the image is not rotated at all.
 
     Returns:
         The rotated image and the angle of rotation
@@ -52,11 +60,17 @@ def correct_tilt(image: Image.Image, tilt_threshold: float = 10) -> tuple[Image.
     except Exception as e:
         warnings.warn(f"Error while detecting tilt: {e}")
         angle = 0.0
+
     angle = _closest_90_degree_distance(angle)  # We round to the nearest multiple of 90 degrees
-    span.add_event("Tilt detection completed", attributes={"angle": angle})
+    span.set_attribute("tilt", angle)
+    tilt_histogram.record(angle)
 
     # We only rotate if the angle is small enough to prevent bugs introduced by the algorithm
     angle = angle if abs(angle) < tilt_threshold else 0.0
-    rotated_image = image.rotate(-angle, expand=True, fillcolor="white")
+    with tracer.start_as_current_span("correct_tilt: rotate_image", attributes={"angle": angle}):
+        if abs(angle) > min_rotation_threshold:
+            rotated_image = image.rotate(-angle, expand=True, fillcolor="white")
+        else:
+            rotated_image = image
 
     return rotated_image, angle

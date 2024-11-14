@@ -1,4 +1,3 @@
-import functools
 from typing import Any, List, Optional, Tuple, Union
 
 import numpy as np
@@ -16,6 +15,7 @@ class PaddleOCR(OcrWrapper):
         max_size: Optional[int] = 1024,
         add_checkboxes: bool = False,
         add_qr_barcodes: bool = False,
+        min_rotation_threshold: float = 0.0,
         verbose: bool = False
     ):
         try:
@@ -28,6 +28,7 @@ class PaddleOCR(OcrWrapper):
             max_size=max_size,
             add_checkboxes=add_checkboxes,
             add_qr_barcodes=add_qr_barcodes,
+            min_rotation_threshold=min_rotation_threshold,
             verbose=verbose,
         )
         self.client = paddleocr.PaddleOCR(

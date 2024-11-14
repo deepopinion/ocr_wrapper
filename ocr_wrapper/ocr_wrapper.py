@@ -70,6 +70,7 @@ class OcrWrapper(ABC):
         supports_multi_samples: bool = False,
         add_checkboxes: bool = False,
         add_qr_barcodes: bool = False,
+        min_rotation_threshold: float = 0.0,
         verbose: bool = False,
     ):
         if cache_file == OCR_CACHE_DISABLED:
@@ -89,6 +90,7 @@ class OcrWrapper(ABC):
         if self.add_checkboxes:
             warnings.warn("Checkbox detection is only supported by GoogleAzureOCR")
         self.add_qr_barcodes = add_qr_barcodes
+        self.min_rotation_threshold = min_rotation_threshold
         self.shelve_mutex = Lock()  # Mutex to ensure that only one thread is writing to the cache file at a time
 
     @overload
@@ -111,7 +113,7 @@ class OcrWrapper(ABC):
 
         # Correct tilt (i.e. small rotation)
         if self.correct_tilt:
-            img, tilt_angle = correct_tilt(img)
+            img, tilt_angle = correct_tilt(img, min_rotation_threshold=self.min_rotation_threshold)
             extra["rotated_image"] = img
             extra["tilt_angle"] = tilt_angle
             span.set_attribute("tilt_angle", tilt_angle)

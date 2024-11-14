@@ -20,6 +20,7 @@ class EasyOCR(OcrWrapper):
         max_size: Optional[int] = 1024,
         add_checkboxes: bool = False,
         add_qr_barcodes: bool = False,
+        min_rotation_threshold: float = 0.0,
         verbose: bool = False,
         **kwargs,
     ):
@@ -38,6 +39,7 @@ class EasyOCR(OcrWrapper):
             max_size=max_size,
             add_checkboxes=add_checkboxes,
             add_qr_barcodes=add_qr_barcodes,
+            min_rotation_threshold=min_rotation_threshold,
             verbose=verbose,
         )
         self.languages = [languages] if isinstance(languages, str) else list(languages)

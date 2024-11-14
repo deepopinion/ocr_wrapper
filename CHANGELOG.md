@@ -5,6 +5,7 @@ The version numbers are according to [Semantic Versioning](http://semver.org/).
 ## Release v0.0.x ()
 ### Added
 - Added a new argument `min_rotation_threshold` to tilt correction. Images will only be rotated for tilts above this threshold. Defaults to 0.0.
+- All OCR classes also have the `min_rotation_threshold` argument now, defaulting to 0.0.
 ### Fixed
 
 ### Changed

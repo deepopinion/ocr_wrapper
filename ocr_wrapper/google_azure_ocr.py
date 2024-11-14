@@ -45,6 +45,7 @@ class GoogleAzureOCR:
         correct_tilt: Optional[bool] = None,
         add_checkboxes: bool = False,  # If True, Document OCR by Google is used to detect checkboxes
         add_qr_barcodes: bool = False,  # If True, QR barcodes are detected and added as BBoxes
+        min_rotation_threshold: float = 0.0,
         verbose: bool = False,
     ):
         if ocr_samples is not None and ocr_samples != 1:
@@ -68,6 +69,7 @@ class GoogleAzureOCR:
         self.verbose = verbose
         self.add_checkboxes = add_checkboxes
         self.add_qr_barcodes = add_qr_barcodes
+        self.min_rotation_threshold = min_rotation_threshold
         self.shelve_mutex = Lock()  # Mutex to ensure that only one thread is writing to the cache file at a time
 
     @overload
@@ -116,7 +118,7 @@ class GoogleAzureOCR:
             checkbox_ocr = GoogleDocumentOcrCheckboxDetector()
 
         # Do the tilt angle correction ourselves externally to have consistend input to Google and Azure
-        img, tilt_angle = correct_tilt(img)
+        img, tilt_angle = correct_tilt(img, min_rotation_threshold=self.min_rotation_threshold)
         span.set_attribute("tilt_angle", tilt_angle)
 
         # Run Google OCR and Azure OCR in parallel via theadpool

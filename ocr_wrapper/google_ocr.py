@@ -175,6 +175,7 @@ class GoogleOCR(OcrWrapper):
         ocr_samples: int = 2,
         add_checkboxes: bool = False,
         add_qr_barcodes: bool = False,
+        min_rotation_threshold: float = 0.0,
         verbose: bool = False,
     ):
         try:
@@ -191,6 +192,7 @@ class GoogleOCR(OcrWrapper):
             supports_multi_samples=True,
             add_checkboxes=add_checkboxes,
             add_qr_barcodes=add_qr_barcodes,
+            min_rotation_threshold=min_rotation_threshold,
             verbose=verbose,
         )
         # Get credentials from environment variable of the offered default locations

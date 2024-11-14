@@ -14,6 +14,8 @@ class AwsOCR(OcrWrapper):
         cache_file: Union[None, str, OcrCacheDisabled] = None,
         max_size: Optional[int] = 1024,
         add_checkboxes: bool = False,
+        add_qr_barcodes: bool = False,
+        min_rotation_threshold: float = 0.0,
         verbose: bool = False
     ):
         try:
@@ -25,6 +27,8 @@ class AwsOCR(OcrWrapper):
             cache_file=cache_file,
             max_size=max_size,
             add_checkboxes=add_checkboxes,
+            add_qr_barcodes=add_qr_barcodes,
+            min_rotation_threshold=min_rotation_threshold,
             verbose=verbose,
         )
         self.client = boto3.client("textract", region_name="eu-central-1")

@@ -11,8 +11,6 @@ dependencies = [
     "pdf2image",
     "rtree",
     "opencv-python-headless",
-    "torch",
-    "torchvision",
     "numpy",
     "scipy",
     "opentelemetry-api",

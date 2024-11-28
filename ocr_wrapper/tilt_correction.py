@@ -22,7 +22,7 @@ if os.getenv("OCR_WRAPPER_NO_TORCH"):
     from .tilt_correction_numpy import DetectTilt
 else:
     USE_TORCH = True
-    from .tilt_correction_torch import DetectTilt
+    raise RuntimeError("Torch is not implemented in this version!")
 
 
 def _closest_90_degree_distance(angle: float) -> float:
